@@ -71,6 +71,8 @@ add_library(${PROJECT_NAME}
 	src/docmain.h
 	src/drawable.cpp
 	src/drawable.h
+	src/dynrpg.cpp
+	src/dynrpg.h
 	src/exe_reader.cpp
 	src/exe_reader.h
 	src/exfont.h
