@@ -97,6 +97,7 @@ namespace Player {
 	std::string escape_symbol;
 	int engine;
 	std::string game_title;
+	int patch;
 	int frames;
 	std::string replay_input_path;
 	std::string record_input_path;
@@ -718,6 +719,11 @@ void Player::CreateGameObjects() {
 		}
 	}
 	Output::Debug("Engine configured as: 2k=%d 2k3=%d 2k3Legacy=%d MajorUpdated=%d Eng=%d", Player::IsRPG2k(), Player::IsRPG2k3(), Player::IsRPG2k3Legacy(), Player::IsMajorUpdatedVersion(), Player::IsEnglish());
+
+	if (!FileFinder::FindDefault("dynloader.dll").empty()) {
+		patch |= PatchDynRpg;
+		Output::Debug("DynRPG enabled");
+	}
 
 	FileFinder::InitRtpPaths(no_rtp_flag, no_rtp_warning_flag);
 
