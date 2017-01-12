@@ -27,6 +27,8 @@
 #include <fstream>
 #include <map>
 
+#include "dynrpg_textplugin.h"
+
 enum DynRpg_ParseMode {
 	ParseMode_Function,
 	ParseMode_WaitForComma,
@@ -284,6 +286,8 @@ static bool ValidFunction(const std::string& token) {
 void create_all_plugins() {
 	dyn_rpg_functions = dyn_rpg_builtin_functions;
 
+	plugins.emplace_back(new DynRpg::TextPlugin());	
+	
 	for (auto& plugin : plugins) {
 		plugin->RegisterFunctions();
 	}

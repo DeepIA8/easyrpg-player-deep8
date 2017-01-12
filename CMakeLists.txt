@@ -86,6 +86,8 @@ add_library(${PROJECT_NAME}
 	src/drawable_mgr.h
 	src/dynrpg.cpp
 	src/dynrpg.h
+	src/dynrpg_textplugin.cpp
+	src/dynrpg_textplugin.h
 	src/exe_reader.cpp
 	src/exe_reader.h
 	src/exfont.h

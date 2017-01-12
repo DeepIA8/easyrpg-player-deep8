@@ -110,9 +110,13 @@ private:
 		void Erase();
 
 		void OnPictureSpriteReady();
+
+		Sprite* GetSprite() const { return sprite.get();  }
 	};
 
+public:
 	Picture& GetPicture(int id);
+private:
 	Picture* GetPicturePtr(int id);
 	void RequestPictureSprite(Picture& pic);
 	void OnPictureSpriteReady(int id);
