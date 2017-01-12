@@ -397,3 +397,7 @@ RPG::SavePicture& Game_Picture::GetData() const {
 	// Save: Picture array is guaranteed to be of correct size
 	return *ReaderUtil::GetElement(Main_Data::game_data.pictures, id);
 }
+
+const Sprite* Game_Picture::GetSprite() const {
+	return sprite.get();
+}

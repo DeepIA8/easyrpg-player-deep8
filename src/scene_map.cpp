@@ -179,6 +179,8 @@ void Scene_Map::Update() {
 	spriteset->Update();
 	message_window->Update();
 
+	DynRpg::Update();
+
 	// On platforms with async loading (emscripten) graphical assets loaded this frame
 	// may require us to wait for them to download before we can start the transitions.
 	if (IsAsyncPending()) {
