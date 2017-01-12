@@ -108,6 +108,8 @@ add_library(${PROJECT_NAME} STATIC
 	src/dynrpg_easyrpg.h
 	src/enemyai.cpp
 	src/enemyai.h
+	src/dynrpg_textplugin.cpp
+	src/dynrpg_textplugin.h
 	src/exe_reader.cpp
 	src/exe_reader.h
 	src/exfont.h

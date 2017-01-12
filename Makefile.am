@@ -95,6 +95,8 @@ libeasyrpg_player_a_SOURCES = \
 	src/dynrpg_easyrpg.h \
 	src/enemyai.cpp \
 	src/enemyai.h \
+	src/dynrpg_textplugin.h \
+	src/dynrpg_textplugin.cpp \
 	src/exe_reader.cpp \
 	src/exe_reader.h \
 	src/exfont.h \
