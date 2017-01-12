@@ -29,6 +29,7 @@ add_library(${PROJECT_NAME}
 	src/decoder_xmp.cpp
 	src/drawable.cpp
 	src/dynrpg.cpp
+	src/dynrpg_textplugin.cpp
 	src/filefinder.cpp
 	src/font.cpp
 	src/fps_overlay.cpp
