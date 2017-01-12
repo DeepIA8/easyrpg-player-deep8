@@ -398,6 +398,6 @@ RPG::SavePicture& Game_Picture::GetData() const {
 	return *ReaderUtil::GetElement(Main_Data::game_data.pictures, id);
 }
 
-const Sprite* Game_Picture::GetSprite() const {
+Sprite* Game_Picture::GetSprite() const {
 	return sprite.get();
 }
