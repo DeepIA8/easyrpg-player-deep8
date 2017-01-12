@@ -44,7 +44,7 @@ namespace {
 	bool Oput(dyn_arg_list args) {
 		DYNRPG_FUNCTION("output")
 
-		DYNRPG_CHECK_ARG_LENGTH_MIN(2);
+		DYNRPG_CHECK_ARG_LENGTH(2);
 
 		DYNRPG_GET_STR_ARG(0, mode);
 		DYNRPG_GET_VAR_ARG(1, msg);
@@ -73,12 +73,20 @@ void DynRpg::RegisterFunction(const std::string& name, dynfunc func) {
 }
 
 float DynRpg::GetFloat(std::string str, bool* valid) {
+	if (str.empty()) {
+		if (valid) {
+			*valid = true;
+		}
+
+		return 0.0f;
+	}
+
 	std::istringstream iss(str);
 	float f;
 	iss >> f;
 
 	if (valid) {
-		*valid = iss.eof() && !iss.fail();
+		*valid = !iss.fail();
 	}
 
 	return f;
@@ -138,6 +146,7 @@ static std::string ParseToken(const std::string& token, const std::string& funct
 	std::u32string text = Utils::DecodeUTF32(token);
 	text_index = text.begin();
 	end = text.end();
+	std::u32string u32_tmp;
 
 	char32_t chr = *text_index;
 
@@ -150,7 +159,7 @@ static std::string ParseToken(const std::string& token, const std::string& funct
 
 	for (;;) {
 		if (text_index != end) {
-			chr = *std::next(text_index, 1);
+			chr = *text_index;
 		}
 
 		if (text_index == end) {
@@ -187,16 +196,19 @@ static std::string ParseToken(const std::string& token, const std::string& funct
 			if (!first || number_encountered) {
 				break;
 			}
-			var_part << chr;
+			u32_tmp = chr;
+			var_part << Utils::EncodeUTF(u32_tmp);
 		} else if (chr == 'V') {
 			if (number_encountered) {
 				break;
 			}
-			var_part << chr;
+			u32_tmp = chr;
+			var_part << Utils::EncodeUTF(u32_tmp);
 		}
 		else if (chr >= '0' && chr <= '9') {
 			number_encountered = true;
-			number_part << chr;
+			u32_tmp = chr;
+			number_part << Utils::EncodeUTF(u32_tmp);
 		} else {
 			break;
 		}
@@ -258,6 +270,8 @@ bool DynRpg::Invoke(RPG::EventCommand const& com) {
 	dyn_arg_list args;
 	std::stringstream token;
 
+	++text_index;
+
 	// Parameters can be of type Token, Number or String
 	// Strings are in "", a "-literal is represented by ""
 	// Number is a valid float number
@@ -269,7 +283,7 @@ bool DynRpg::Invoke(RPG::EventCommand const& com) {
 	
 	for (;;) {
 		if (text_index != end) {
-			chr = *std::next(text_index, 1);
+			chr = *text_index;
 		}
 
 		if (text_index == end) {
@@ -373,7 +387,8 @@ bool DynRpg::Invoke(RPG::EventCommand const& com) {
 				}
 				else {
 					mode = ParseMode_Token;
-					token << chr;
+					u32_tmp = chr;
+					token << Utils::EncodeUTF(u32_tmp);
 				}
 				break;
 			case ParseMode_String:
