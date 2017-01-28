@@ -95,10 +95,15 @@ public:
 			return;
 		}
 
+		const Sprite* sprite = Main_Data::game_pictures->GetPicture(pic_id).GetSprite();
+		if (!sprite) {
+			return;
+		}
+
 		if (fixed) {
-			dst.Blit(x - Game_Map::GetDisplayX(), y - Game_Map::GetDisplayY(), *bitmap, bitmap->GetRect(), Opacity::Opaque());
+			dst.Blit(x - Game_Map::GetDisplayX(), y - Game_Map::GetDisplayY(), *bitmap, bitmap->GetRect(), sprite->GetOpacity());
 		} else {
-			dst.Blit(x, y, *bitmap, bitmap->GetRect(), Opacity::Opaque());
+			dst.Blit(x, y, *bitmap, bitmap->GetRect(), sprite->GetOpacity());
 		}
 	};
 
@@ -112,7 +117,6 @@ public:
 			}
 		}
 	}
-
 
 	static int ParseParameter(bool& is_valid, std::u32string::iterator& text_index, std::u32string::iterator& end) {
 		++text_index;
@@ -240,6 +244,13 @@ public:
 					return Data::skills[parameter - 1].description;
 				}
 				return "";
+			case 'x':
+			case 'X':
+				// Take text of ID referenced by X (if exists) TODO
+				{
+
+				}
+				return "";
 			default:;
 				// When this happens text_index was not on a \ during calling
 		}
@@ -363,7 +374,7 @@ static bool WriteText(const dyn_arg_list& args) {
 	DYNRPG_GET_INT_ARG(2, y)
 	DYNRPG_GET_STR_ARG(3, text)
 
-	std::string new_id = DynRpgText::Substitute(id);
+	const std::string new_id = DynRpgText::Substitute(id);
 	graphics[new_id] = std::unique_ptr<DynRpgText>(new DynRpgText(1, x, y + 2, text));
 
 	if (args.size() > 4) {
@@ -387,14 +398,18 @@ static bool WriteText(const dyn_arg_list& args) {
 static bool AppendLine(const dyn_arg_list& args) {
 	DYNRPG_FUNCTION("append_line")
 
-	DYNRPG_CHECK_ARG_LENGTH(3);
+	DYNRPG_CHECK_ARG_LENGTH(2);
 
 	DYNRPG_GET_STR_ARG(0, id)
 	DYNRPG_GET_STR_ARG(1, text)
-	DYNRPG_GET_STR_ARG(2, nothing)
 
-	id = DynRpgText::Substitute(id);
-	graphics[id]->AddLine(text);
+	DynRpgText* handle = get_text(id);
+
+	if (!handle) {
+		return true;
+	}
+
+	handle->AddLine(text);
 
 	return true;
 }
@@ -402,14 +417,18 @@ static bool AppendLine(const dyn_arg_list& args) {
 static bool AppendText(const dyn_arg_list& args) {
 	DYNRPG_FUNCTION("append_text")
 
-	DYNRPG_CHECK_ARG_LENGTH(3);
+	DYNRPG_CHECK_ARG_LENGTH(2);
 
 	DYNRPG_GET_STR_ARG(0, id)
 	DYNRPG_GET_STR_ARG(1, text)
-	DYNRPG_GET_STR_ARG(2, nothing)
 
-	id = DynRpgText::Substitute(id);
-	graphics[id]->AddText(text);
+	DynRpgText* handle = get_text(id);
+
+	if (!handle) {
+		return true;
+	}
+
+	handle->AddText(text);
 
 	return true;
 }
@@ -423,10 +442,15 @@ static bool ChangeText(const dyn_arg_list& args) {
 	DYNRPG_GET_STR_ARG(1, text)
 	DYNRPG_GET_INT_ARG(2, color)
 
-	id = DynRpgText::Substitute(id);
-	graphics[id]->ClearText();
-	graphics[id]->SetColor(color);
-	graphics[id]->AddText(text);
+	DynRpgText* handle = get_text(id);
+
+	if (!handle) {
+		return true;
+	}
+
+	handle->ClearText();
+	handle->SetColor(color);
+	handle->AddText(text);
 
 	return true;
 }
@@ -440,8 +464,14 @@ static bool ChangePosition(const dyn_arg_list& args) {
 	DYNRPG_GET_INT_ARG(1, x)
 	DYNRPG_GET_INT_ARG(2, y)
 
-	id = DynRpgText::Substitute(id);
-	graphics[id]->SetPosition(x, y);
+	DynRpgText* handle = get_text(id);
+
+	if (!handle) {
+		return true;
+	}
+
+	// Offset is somehow wrong compared to RPG_RT
+	handle->SetPosition(x, y + 2);
 
 	return true;
 }
@@ -454,8 +484,13 @@ static bool RemoveText(const dyn_arg_list& args) {
 	DYNRPG_GET_STR_ARG(0, id)
 	DYNRPG_GET_STR_ARG(1, nothing)
 
-	id = DynRpgText::Substitute(id);
-	graphics[id]->ClearText();
+	DynRpgText* handle = get_text(id);
+
+	if (!handle) {
+		return true;
+	}
+
+	handle->ClearText();
 
 	return true;
 }
