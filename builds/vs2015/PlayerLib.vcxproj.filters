@@ -164,6 +164,9 @@
     <ClCompile Include="..\..\src\dynrpg_pec.cpp">
       <Filter>Source Files\Engine</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\dynrpg_rpgss.cpp">
+      <Filter>Source Files\Engine</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\dynrpg_textplugin.cpp">
       <Filter>Source Files\Engine</Filter>
     </ClCompile>
@@ -1037,6 +1040,9 @@
       <Filter>Source Files\Engine</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\dynrpg_pec.h">
+      <Filter>Source Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\dynrpg_rpgss.h">
       <Filter>Source Files\Engine</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\dynrpg_textplugin.h">

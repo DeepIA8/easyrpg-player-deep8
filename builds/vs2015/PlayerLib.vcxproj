@@ -455,6 +455,7 @@
     <ClCompile Include="..\..\src\dynrpg.cpp" />
     <ClCompile Include="..\..\src\dynrpg_particle.cpp" />
     <ClCompile Include="..\..\src\dynrpg_pec.cpp" />
+    <ClCompile Include="..\..\src\dynrpg_rpgss.cpp" />
     <ClCompile Include="..\..\src\dynrpg_textplugin.cpp" />
     <ClCompile Include="..\..\src\filefinder.cpp" />
     <ClCompile Include="..\..\src\font.cpp" />
@@ -621,6 +622,7 @@
     <ClInclude Include="..\..\src\dynrpg.h" />
     <ClInclude Include="..\..\src\dynrpg_particle.h" />
     <ClInclude Include="..\..\src\dynrpg_pec.h" />
+    <ClInclude Include="..\..\src\dynrpg_rpgss.h" />
     <ClInclude Include="..\..\src\dynrpg_textplugin.h" />
     <ClInclude Include="..\..\src\exfont.h" />
     <ClInclude Include="..\..\src\filefinder.h" />
