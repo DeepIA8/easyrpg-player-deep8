@@ -77,6 +77,8 @@ add_library(${PROJECT_NAME}
 	src/dynrpg_particle.h
 	src/dynrpg_pec.cpp
 	src/dynrpg_pec.h
+	src/dynrpg_rpgss.cpp
+	src/dynrpg_rpgss.h
 	src/dynrpg_textplugin.cpp
 	src/dynrpg_textplugin.h
 	src/exe_reader.cpp
