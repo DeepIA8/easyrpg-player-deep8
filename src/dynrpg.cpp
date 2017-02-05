@@ -41,7 +41,7 @@ namespace {
 
 	// DynRpg Functions
 
-	bool Oput(dyn_arg_list args) {
+	bool Oput(const dyn_arg_list& args) {
 		DYNRPG_FUNCTION("output")
 
 		DYNRPG_CHECK_ARG_LENGTH(2);
@@ -62,7 +62,7 @@ namespace {
 		return true;
 	}
 
-	bool Call(dyn_arg_list args);
+	bool Call(const dyn_arg_list& args);
 
 	// Function table
 	dyn_rpg_func dyn_rpg_functions = {
@@ -70,7 +70,7 @@ namespace {
 			{"call", Call}
 	};
 
-	bool Call(dyn_arg_list args) {
+	bool Call(const dyn_arg_list& args) {
 		DYNRPG_FUNCTION("call")
 
 		DYNRPG_CHECK_ARG_LENGTH(1)
@@ -123,7 +123,7 @@ float DynRpg::GetFloat(std::string str, bool* valid) {
 }
 
 // Var arg referenced by $n
-std::string DynRpg::ParseVarArg(const dyn_arg_list &args, int index) {
+std::string DynRpg::ParseVarArg(const dyn_arg_list& args, int index) {
 	if (index >= args.size()) {
 		return "";
 	}
