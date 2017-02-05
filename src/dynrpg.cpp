@@ -459,3 +459,11 @@ bool DynRpg::Invoke(RPG::EventCommand const& com) {
 	}
 	return true;
 }
+
+void DynRpg::Update() {
+
+}
+
+void DynRpg::Reset() {
+
+}
