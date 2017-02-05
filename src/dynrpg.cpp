@@ -30,6 +30,7 @@
 #include "dynrpg_particle.h"
 #include "dynrpg_pec.h"
 #include "dynrpg_textplugin.h"
+#include "dynrpg_rpgss.h"
 
 enum DynRpg_ParseMode {
 	ParseMode_Function,
@@ -291,6 +292,7 @@ void create_all_plugins() {
 	plugins.emplace_back(new DynRpg::TextPlugin());
 	plugins.emplace_back(new DynRpg::Pec());
 	plugins.emplace_back(new DynRpg::Particle());
+	plugins.emplace_back(new DynRpg::Rpgss());
 	
 	for (auto& plugin : plugins) {
 		plugin->RegisterFunctions();

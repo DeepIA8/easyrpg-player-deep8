@@ -87,6 +87,8 @@ libeasyrpg_player_a_SOURCES = \
 	src/dynrpg_particle.cpp \
 	src/dynrpg_pec.h \
 	src/dynrpg_pec.cpp \
+	src/dynrpg_rpgss.h \
+	src/dynrpg_rpgss.cpp \
 	src/dynrpg_textplugin.h \
 	src/dynrpg_textplugin.cpp \
 	src/exe_reader.cpp \
