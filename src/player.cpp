@@ -43,6 +43,7 @@
 #include "async_handler.h"
 #include "audio.h"
 #include "cache.h"
+#include "dynrpg.h"
 #include "filefinder.h"
 #include "game_actors.h"
 #include "game_battle.h"
@@ -791,6 +792,7 @@ void Player::ResetGameObjects() {
 	Main_Data::game_enemyparty.reset(new Game_EnemyParty());
 	Main_Data::game_party.reset(new Game_Party());
 	Main_Data::game_player.reset(new Game_Player());
+	DynRpg::Reset();
 
 	FrameReset();
 }
