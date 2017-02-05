@@ -73,6 +73,8 @@ add_library(${PROJECT_NAME}
 	src/drawable.h
 	src/dynrpg.cpp
 	src/dynrpg.h
+	src/dynrpg_particle.cpp
+	src/dynrpg_particle.h
 	src/dynrpg_pec.cpp
 	src/dynrpg_pec.h
 	src/dynrpg_textplugin.cpp
