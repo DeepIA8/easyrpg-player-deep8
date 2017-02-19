@@ -84,9 +84,9 @@ void Graphics::UpdateTitle() {
 
 	std::stringstream title;
 	if (!Player::game_title.empty()) {
-		title << Player::game_title << " - ";
+		title << Player::game_title;// << " - ";
 	}
-	title << GAME_TITLE;
+	//title << GAME_TITLE;
 
 	if (DisplayUi->ShowFpsOnTitle()) {
 		title << " - " << fps_overlay->GetFpsString();

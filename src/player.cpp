@@ -726,12 +726,11 @@ void Player::CreateGameObjects() {
 	std::stringstream title;
 	if (!game_title.empty()) {
 		Output::Debug("Loading game {}", game_title);
-		title << game_title << " - ";
-		Input::AddRecordingData(Input::RecordingData::GameTitle, game_title);
+		title << game_title;// << " - ";
 	} else {
 		Output::Debug("Could not read game title.");
 	}
-	title << GAME_TITLE;
+	//title << GAME_TITLE;
 	DisplayUi->SetTitle(title.str());
 
 	if (no_rtp_warning_flag) {
