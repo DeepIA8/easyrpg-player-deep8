@@ -19,7 +19,8 @@
 #include "dynrpg.h"
 #include "game_actors.h"
 #include "game_variables.h"
-#include "main_data.h"#include "player.h"
+#include "main_data.h"
+#include "player.h"
 
 #include <map>
 
@@ -94,7 +95,9 @@ namespace {
 			return true;
 		}
 
-		return true;
+		dyn_arg_list new_args(args.begin() + 1, args.end());
+
+		return dyn_rpg_functions[token](new_args);
 	}
 }
 
@@ -270,14 +273,14 @@ static bool ValidFunction(const std::string& token) {
 	return true;
 }
 
-bool DynRpg::Invoke(RPG::EventCommand const& com) {
-	if (com.string.empty()) {
+bool DynRpg::Invoke(const std::string& command) {
+	if (command.empty()) {
 		// Not a DynRPG function (empty comment)
 		return true;
 	}
 
 	std::u32string::iterator text_index, end;
-	std::u32string text = Utils::DecodeUTF32(com.string);
+	std::u32string text = Utils::DecodeUTF32(command);
 	text_index = text.begin();
 	end = text.end();
 
@@ -425,7 +428,7 @@ bool DynRpg::Invoke(RPG::EventCommand const& com) {
 				if (chr == '"') {
 					// Test for "" -> append "
 					// otherwise end of string
-					if (std::distance(text_index, end) > 1 && *std::next(text_index, 2) == '"') {
+					if (std::distance(text_index, end) > 1 && *std::next(text_index, 1) == '"') {
 						token << '"';
 						++text_index;
 					}
