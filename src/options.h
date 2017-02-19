@@ -19,7 +19,7 @@
 #define EP_OPTIONS_H
 
 /** Window title to show. */
-#define GAME_TITLE "EasyRPG Player"
+#define GAME_TITLE "Deep 8"
 
 /** Targeted screen default width. */
 #define SCREEN_TARGET_WIDTH 320
