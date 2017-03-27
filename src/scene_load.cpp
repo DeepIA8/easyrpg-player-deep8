@@ -17,12 +17,12 @@
 
 // Headers
 #include <sstream>
+#include "dynrpg.h"
 #include "filefinder.h"
 #include "game_temp.h"
 #include "output.h"
 #include "player.h"
 #include "scene_load.h"
-#include "scene_file.h"
 #include "scene_map.h"
 #include "scene_title.h"
 
@@ -38,6 +38,8 @@ void Scene_Load::Action(int index) {
 	std::string save_name = FileFinder::FindDefault(*tree, ss.str());
 
 	Player::LoadSavegame(save_name);
+
+	DynRpg::Load(index + 1);
 
 	auto title_scene = Scene::Find(Scene::Title);
 	if (title_scene) {
