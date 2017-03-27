@@ -37,6 +37,9 @@ typedef std::map<std::string, dynfunc> dyn_rpg_func;
 namespace {
 	bool init = false;
 
+	// Registered DynRpg Plugins
+	std::vector<std::unique_ptr<DynRpgPlugin>> plugins;
+
 	// already reported unknown funcs
 	std::map<std::string, int> unknown_functions;
 
@@ -273,6 +276,12 @@ static bool ValidFunction(const std::string& token) {
 	return true;
 }
 
+void create_all_plugins() {
+	for (auto& plugin : plugins) {
+		plugin->RegisterFunctions();
+	}
+}
+
 bool DynRpg::Invoke(const std::string& command) {
 	if (command.empty()) {
 		// Not a DynRPG function (empty comment)
@@ -293,7 +302,7 @@ bool DynRpg::Invoke(const std::string& command) {
 
 	if (!init) {
 		init = true;
-		// Register functions here
+		create_all_plugins();
 	}
 
 	DynRpg_ParseMode mode = ParseMode_Function;
@@ -310,10 +319,10 @@ bool DynRpg::Invoke(const std::string& command) {
 	// Number is a valid float number
 	// Tokens are Strings without "" and with Whitespace stripped o_O
 	// If a token is (regex) N?V+[0-9]+ it is resolved to a var or an actor
-	
+
 	// All arguments are passed as string to the DynRpg functions and are
 	// converted to int or float on demand.
-	
+
 	for (;;) {
 		if (text_index != end) {
 			chr = *text_index;
@@ -463,10 +472,32 @@ bool DynRpg::Invoke(const std::string& command) {
 	return true;
 }
 
-void DynRpg::Update() {
+void DynRpg::Load(std::vector<uint8_t>& save_data) {
+	// ToDo: Processing
 
+	for (auto& plugin : plugins) {
+		plugin->Load(save_data);
+	}
+}
+
+std::vector<uint8_t> DynRpg::Save() {
+	// ToDo: Processing
+
+	for (auto &plugin : plugins) {
+		std::vector<uint8_t> save_data = plugin->Save();
+	}
+
+	return std::vector<uint8_t>();
+}
+
+void DynRpg::Update() {
+	for (auto& plugin : plugins) {
+		plugin->Update();
+	}
 }
 
 void DynRpg::Reset() {
-
+	dyn_rpg_functions.clear();
+	plugins.clear();
 }
+
