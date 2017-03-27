@@ -17,11 +17,11 @@
 
 // Headers
 #include <sstream>
+#include "dynrpg.h"
 #include "filefinder.h"
 #include "output.h"
 #include "player.h"
 #include "scene_load.h"
-#include "scene_file.h"
 #include "scene_map.h"
 
 Scene_Load::Scene_Load() :
@@ -36,6 +36,8 @@ void Scene_Load::Action(int index) {
 	std::string save_name = FileFinder::FindDefault(*tree, ss.str());
 
 	Player::LoadSavegame(save_name);
+
+	DynRpg::Load(index + 1);
 }
 
 bool Scene_Load::IsSlotValid(int index) {

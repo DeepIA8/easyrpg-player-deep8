@@ -23,6 +23,7 @@
 #endif
 
 #include "data.h"
+#include "dynrpg.h"
 #include "filefinder.h"
 #include "game_actor.h"
 #include "game_map.h"
@@ -38,8 +39,6 @@
 #include "output.h"
 #include "player.h"
 #include "scene_save.h"
-#include "scene_file.h"
-#include "reader_util.h"
 #include "version.h"
 
 Scene_Save::Scene_Save() :
@@ -134,6 +133,8 @@ void Scene_Save::Action(int index) {
 		}
 	}
 	LSD_Reader::Save(filename, data_copy, Player::encoding);
+
+	DynRpg::Save(index + 1);
 
 #ifdef EMSCRIPTEN
 	// Save changed file system
