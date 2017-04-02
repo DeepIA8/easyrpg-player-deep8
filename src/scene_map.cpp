@@ -37,6 +37,7 @@
 #include "screen.h"
 #include "scene_load.h"
 #include "output.h"
+#include "dynrpg.h"
 
 static bool GetRunForegroundEvents(TeleportTarget::Type tt) {
 	switch (tt) {
@@ -79,6 +80,7 @@ void Scene_Map::Start() {
 		Game_System::BgmPlay(current_music);
 	} else {
 		Game_Map::PlayBgm();
+		//DynRpg::Load(load_save_id);
 	}
 
 	Main_Data::game_screen->InitGraphics();

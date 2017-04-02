@@ -93,6 +93,7 @@ private:
 
 	int debug_menuoverwrite_counter = 0;
 	bool from_save = false;
+
 	bool screen_erased_by_event = false;
 
 	AsyncContinuation map_async_continuation = {};
