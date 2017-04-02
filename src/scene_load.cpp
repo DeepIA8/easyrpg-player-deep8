@@ -39,14 +39,13 @@ void Scene_Load::Action(int index) {
 
 	Player::LoadSavegame(save_name);
 
-	DynRpg::Load(index + 1);
 
 	auto title_scene = Scene::Find(Scene::Title);
 	if (title_scene) {
 		static_cast<Scene_Title*>(title_scene.get())->OnGameLoad();
 	}
 
-	Scene::Push(std::make_shared<Scene_Map>(true));
+	Scene::Push(std::make_shared<Scene_Map>(index + 1));
 }
 
 bool Scene_Load::IsSlotValid(int index) {

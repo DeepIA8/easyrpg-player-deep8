@@ -32,7 +32,7 @@ public:
 	/**
 	 * Constructor.
 	 */
-	Scene_Map(bool from_save = false);
+	Scene_Map(int load_save_id = 0);
 
 	~Scene_Map();
 
@@ -67,7 +67,7 @@ private:
 	std::unique_ptr<Window_Message> message_window;
 
 	int debug_menuoverwrite_counter = 0;
-	bool from_save;
+	int load_save_id = 0;
 	// Teleport from new game or Teleport / Escape skill from menu.
 	bool teleport_from_other_scene = false;
 	bool screen_erased_by_event = false;
