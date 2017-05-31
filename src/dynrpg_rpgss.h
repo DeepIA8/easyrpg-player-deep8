@@ -25,8 +25,11 @@ namespace DynRpg {
 	public:
 		~Rpgss();
 
+		std::string GetIdentifier();
 		void RegisterFunctions();
 		void Update();
+		void Load(const std::vector<uint8_t>& in);
+		std::vector<uint8_t> Save();
 	};
 }
 
