@@ -26,6 +26,7 @@
 #include "game_party.h"
 #include "graphics.h"
 #include "sprite.h"
+#include "picojson.h"
 
 class RpgssSprite;
 
@@ -35,15 +36,18 @@ namespace {
 
 class RpgssSprite {
 public:
-	enum class BlendMode {
-		Mix
+	enum BlendMode {
+		BlendMode_Mix
 	};
 
-	enum class FixedTo {
-		Map,
-		Screen,
-		Mouse
+	enum FixedTo {
+		FixedTo_Map,
+		FixedTo_Screen,
+		FixedTo_Mouse
 	};
+
+	RpgssSprite() {
+	}
 
 	RpgssSprite(const std::string& filename) {
 		SetSpriteImage(filename);
@@ -74,7 +78,7 @@ public:
 			return;
 		}
 
-		if (fixed_to == FixedTo::Map) {
+		if (fixed_to == FixedTo_Map) {
 			if (old_map_x != Game_Map::GetDisplayX()) {
 				double mx = (old_map_x - Game_Map::GetDisplayX()) / (double)TILE_SIZE;
 
@@ -169,9 +173,9 @@ public:
 	void SetFixedTo(FixedTo to) {
 		fixed_to = to;
 
-		if (fixed_to == FixedTo::Mouse) {
+		if (fixed_to == FixedTo_Mouse) {
 			Output::Warning("Sprite: Fixed to mouse not supported");
-		} else if (fixed_to == FixedTo::Map) {
+		} else if (fixed_to == FixedTo_Map) {
 			if (!sprite) {
 				return;
 			}
@@ -214,6 +218,66 @@ public:
 		opacity_time_left = 0;
 	}
 
+	picojson::object Save() {
+		picojson::object o;
+		o["blendmode"] = picojson::value((double)blendmode);
+		o["fixed_to"] = picojson::value((double)fixed_to);
+		o["current_x"] = picojson::value(current_x);
+		o["current_y"] = picojson::value(current_y);
+		o["finish_x"] = picojson::value(finish_x);
+		o["finish_y"] = picojson::value(finish_y);
+		o["movement_time_left"] = picojson::value((double)movement_time_left);
+		o["current_zoom"] = picojson::value(current_zoom);
+		o["finish_zoom"] = picojson::value(finish_zoom);
+		o["zoom_time_left"] = picojson::value((double)zoom_time_left);
+		o["current_angle"] = picojson::value(current_angle);
+		o["finish_angle"] = picojson::value(finish_angle);
+		o["rotation_time_left"] = picojson::value((double)rotation_time_left);
+		o["z"] = picojson::value((double)z);
+		o["visible"] = picojson::value(visible);
+		o["rotate_cw"] = picojson::value(rotate_cw);
+		o["rotate_forever_degree"] = picojson::value(rotate_forever_degree);
+		o["time_left"] = picojson::value((double)time_left);
+		o["current_opacity"] = picojson::value(current_opacity);
+		o["finish_opacity"] = picojson::value(finish_opacity);
+		o["opacity_time_left"] = picojson::value((double)opacity_time_left);
+		o["old_map_x"] = picojson::value((double)old_map_x);
+		o["old_map_y"] = picojson::value((double)old_map_y);
+		o["filename"] = picojson::value(file);
+
+		return o;
+	}
+
+	static std::unique_ptr<RpgssSprite> Load(picojson::object& o) {
+		auto sprite = std::unique_ptr<RpgssSprite>(new RpgssSprite(o["filename"].get<std::string>()));
+
+		sprite->blendmode = (int)(o["blendmode"].get<double>());
+		sprite->fixed_to = (int)(o["fixed_to"].get<double>());
+		sprite->current_x = o["current_x"].get<double>();
+		sprite->current_y = o["current_y"].get<double>();
+		sprite->finish_x = o["finish_x"].get<double>();
+		sprite->finish_y = o["finish_y"].get<double>();
+		sprite->movement_time_left = (int)o["movement_time_left"].get<double>();
+		sprite->current_zoom = o["current_zoom"].get<double>();
+		sprite->finish_zoom = o["finish_zoom"].get<double>();
+		sprite->zoom_time_left = (int)o["zoom_time_left"].get<double>();
+		sprite->current_angle = o["current_angle"].get<double>();
+		sprite->finish_angle = o["finish_angle"].get<double>();
+		sprite->rotation_time_left = (int)o["rotation_time_left"].get<double>();
+		sprite->z = (int)o["z"].get<double>();
+		sprite->visible = o["visible"].get<bool>();
+		sprite->rotate_cw = o["rotate_cw"].get<bool>();
+		sprite->rotate_forever_degree = o["rotate_forever_degree"].get<double>();
+		sprite->time_left = (int)o["time_left"].get<double>();
+		sprite->current_opacity = o["current_opacity"].get<double>();
+		sprite->finish_opacity = o["finish_opacity"].get<double>();
+		sprite->opacity_time_left = (int)o["opacity_time_left"].get<double>();
+		sprite->old_map_x = (int)o["old_map_x"].get<double>();
+		sprite->old_map_y = (int)o["old_map_y"].get<double>();
+
+		return sprite;
+	}
+
 private:
 	void SetSpriteDefaults() {
 		if (!sprite) {
@@ -233,7 +297,7 @@ private:
 		// Does not go through the Cache code
 		// No fancy stuff like checkerboard on load error :(
 
-		std::string file = FileFinder::FindDefault(filename);
+		file = FileFinder::FindDefault(filename);
 
 		if (file.empty()) {
 			Output::Warning("Sprite not found: %s", filename.c_str());
@@ -247,8 +311,8 @@ private:
 
 	std::unique_ptr<Sprite> sprite;
 
-	BlendMode blendmode = BlendMode::Mix;
-	FixedTo fixed_to = FixedTo::Screen;
+	int blendmode = BlendMode_Mix;
+	int fixed_to = FixedTo_Screen;
 
 	double current_x = 0.0;
 	double current_y = 0.0;
@@ -274,6 +338,8 @@ private:
 
 	int old_map_x;
 	int old_map_y;
+
+	std::string file;
 };
 
 static bool AddSprite(const dyn_arg_list& args) {
@@ -391,8 +457,8 @@ static bool BindSpriteTo(const dyn_arg_list& args) {
 
 	// ERRORCHK
 
-	graphics[id]->SetFixedTo(coordsys == "mouse" ? RpgssSprite::FixedTo::Mouse :
-		coordsys == "map" ? RpgssSprite::FixedTo::Map : RpgssSprite::FixedTo::Screen);
+	graphics[id]->SetFixedTo(coordsys == "mouse" ? RpgssSprite::FixedTo_Mouse :
+		coordsys == "map" ? RpgssSprite::FixedTo_Map : RpgssSprite::FixedTo_Screen);
 
 	return true;
 }
@@ -543,6 +609,10 @@ static bool ShiftSpriteOpacityTo(const dyn_arg_list& args) {
 	return true;
 }
 
+std::string DynRpg::Rpgss::GetIdentifier() {
+	return "RpgssDeep8";
+}
+
 void DynRpg::Rpgss::RegisterFunctions() {
 	DynRpg::RegisterFunction("add_sprite", AddSprite);
 	DynRpg::RegisterFunction("set_sprite_blend_mode", SetSpriteBlendMode);
@@ -573,4 +643,34 @@ void DynRpg::Rpgss::Update() {
 
 DynRpg::Rpgss::~Rpgss() {
 	graphics.clear();
+}
+
+void DynRpg::Rpgss::Load(const std::vector<uint8_t> &in) {
+	picojson::value v;
+	std::string s;
+	s.resize(in.size());
+	std::copy(in.begin(), in.end(), s.begin());
+
+	picojson::parse(v, s);
+
+	for (auto& k : v.get<picojson::object>()) {
+		graphics[k.first] = RpgssSprite::Load(k.second.get<picojson::object>());
+	}
+}
+
+std::vector<uint8_t> DynRpg::Rpgss::Save() {
+	picojson::object o;
+
+	for (auto& g : graphics) {
+		o[g.first] = picojson::value(g.second->Save());
+	}
+
+	std::string s = picojson::value(o).serialize();
+
+	std::vector<uint8_t> v;
+	v.resize(s.size());
+
+	std::copy(s.begin(), s.end(), v.begin());
+
+	return v;
 }
