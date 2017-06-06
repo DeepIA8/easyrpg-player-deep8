@@ -29,6 +29,9 @@
 
 class RpgssSprite;
 
+constexpr int layer_mask = (1 << 20);
+constexpr int default_priority = Priority_Frame + layer_mask;
+
 namespace {
 	std::map<std::string, std::unique_ptr<RpgssSprite>> graphics;
 }
@@ -121,7 +124,6 @@ public:
 			current_angle += (rotate_cw ? 1 : -1) * rotate_forever_degree;
 		}
 
-		sprite->SetZ(100000 + z);
 		sprite->SetX(current_x);
 		sprite->SetY(current_y);
 		sprite->SetOx((int)(sprite->GetWidth() / 2));
@@ -191,6 +193,10 @@ public:
 	void SetY(int y) {
 		current_y = y;
 		movement_time_left = 0;
+	}
+
+	int GetZ() {
+		return z;
 	}
 
 	void SetZ(int z) {
@@ -285,7 +291,7 @@ private:
 
 		current_x = 160.0;
 		current_y = 120.0;
-		z = 0;
+		z = default_priority;
 		current_zoom = 100.0;
 
 		old_map_x = Game_Map::GetDisplayX();
@@ -384,7 +390,7 @@ static bool AddSprite(const dyn_arg_list& args) {
 		case 5:
 		{
 			DYNRPG_GET_INT_ARG(4, z)
-			graphic->SetZ(Priority_Frame + (1 << 20) + z);
+			graphic->SetZ(default_priority + z);
 		}
 		case 4:
 		{
@@ -608,6 +614,73 @@ static bool ShiftSpriteOpacityTo(const dyn_arg_list& args) {
 	return true;
 }
 
+static bool SetZ(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("set_sprite_z")
+
+	DYNRPG_CHECK_ARG_LENGTH(3)
+
+	DYNRPG_GET_STR_ARG(0, id)
+	DYNRPG_GET_INT_ARG(1, z)
+
+	// ERRORCHK
+
+	graphics[id]->SetZ(default_priority + z);
+
+	return true;
+}
+
+static bool SetLayer(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("set_sprite_layer")
+
+	DYNRPG_CHECK_ARG_LENGTH(3)
+
+	DYNRPG_GET_STR_ARG(0, id)
+	DYNRPG_GET_INT_ARG(1, layer)
+
+	// ERRORCHK
+
+	int z = 0;
+
+	switch (layer) {
+		case 1:
+			z = Priority_Background;
+			break;
+		case 2:
+			z = Priority_TilesetBelow;
+			break;
+		case 3:
+			z = Priority_EventsBelow;
+			break;
+		case 4:
+			z = Priority_Player;
+			break;
+		case 5:
+			z = Priority_TilesetAbove;
+			break;
+		case 6:
+			z = Priority_EventsAbove;
+			break;
+		case 7:
+			z = Priority_PictureNew;
+			break;
+		case 8:
+			z = Priority_BattleAnimation;
+			break;
+		case 9:
+			z = Priority_Window;
+			break;
+		case 10:
+			z = Priority_Timer;
+			break;
+	}
+
+	int old_z = graphics[id]->GetZ() & 0xFFFF;
+
+	graphics[id]->SetZ(z + layer_mask + old_z);
+
+	return true;
+}
+
 std::string DynRpg::Rpgss::GetIdentifier() {
 	return "RpgssDeep8";
 }
@@ -627,6 +700,8 @@ void DynRpg::Rpgss::RegisterFunctions() {
 	DynRpg::RegisterFunction("stop_sprite_rotation", StopSpriteRotation);
 	DynRpg::RegisterFunction("set_sprite_opacity", SetSpriteOpacity);
 	DynRpg::RegisterFunction("shift_sprite_opacity_to", ShiftSpriteOpacityTo);
+	DynRpg::RegisterFunction("set_z", SetZ);
+	DynRpg::RegisterFunction("set_layer", SetLayer);
 
 	// TODO : set/shift_sprite_color
 	// TODO : Rotation ist komisch
