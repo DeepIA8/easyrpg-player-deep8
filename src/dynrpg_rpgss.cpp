@@ -120,6 +120,14 @@ public:
 			--opacity_time_left;
 		}
 
+		if (tone_time_left > 0)	{
+			interpolate(tone_time_left, current_red, finish_red);
+			interpolate(tone_time_left, current_green, finish_green);
+			interpolate(tone_time_left, current_blue, finish_blue);
+			interpolate(tone_time_left, current_sat, finish_sat);
+			--tone_time_left;
+		}
+
 		if (rotate_forever_degree) {
 			current_angle += (rotate_cw ? 1 : -1) * rotate_forever_degree;
 		}
@@ -132,6 +140,7 @@ public:
 		sprite->SetZoomX(current_zoom / 100.0);
 		sprite->SetZoomY(current_zoom / 100.0);
 		sprite->SetOpacity((int)(current_opacity));
+		sprite->SetTone(Tone(current_red, current_green, current_blue, current_sat));
 		sprite->SetVisible(visible);
 	}
 
@@ -171,6 +180,14 @@ public:
 		opacity_time_left = frames(ms);
 	}
 
+	void SetToneEffect(Tone new_tone, int ms) {
+		finish_red = new_tone.red;
+		finish_green = new_tone.green;
+		finish_blue = new_tone.blue;
+		finish_sat = new_tone.gray;
+		tone_time_left = frames(ms);
+	}
+
 	void SetFixedTo(FixedTo to) {
 		fixed_to = to;
 
@@ -201,6 +218,14 @@ public:
 
 	void SetZ(int z) {
 		this->z = z;
+	}
+
+	void SetTone(Tone new_tone) {
+		current_red = new_tone.red;
+		current_green = new_tone.green;
+		current_blue = new_tone.blue;
+		current_sat = new_tone.gray;
+		tone_time_left = 0;
 	}
 
 	void SetAngle(int degree) {
@@ -249,6 +274,15 @@ public:
 		o["old_map_x"] = picojson::value((double)old_map_x);
 		o["old_map_y"] = picojson::value((double)old_map_y);
 		o["filename"] = picojson::value(file);
+		o["current_red"] = picojson::value(current_red);
+		o["current_green"] = picojson::value(current_green);
+		o["current_blue"] = picojson::value(current_blue);
+		o["current_sat"] = picojson::value(current_sat);
+		o["finish_red"] = picojson::value(finish_red);
+		o["finish_green"] = picojson::value(finish_green);
+		o["finish_blue"] = picojson::value(finish_blue);
+		o["finish_sat"] = picojson::value(finish_sat);
+		o["tone_time_left"] = picojson::value((double)tone_time_left);
 
 		return o;
 	}
@@ -279,6 +313,16 @@ public:
 		sprite->opacity_time_left = (int)o["opacity_time_left"].get<double>();
 		sprite->old_map_x = (int)o["old_map_x"].get<double>();
 		sprite->old_map_y = (int)o["old_map_y"].get<double>();
+
+		sprite->current_red = o["current_red"].get<double>();
+		sprite->current_green = o["current_green"].get<double>();
+		sprite->current_blue = o["current_blue"].get<double>();
+		sprite->current_sat = o["current_sat"].get<double>();
+		sprite->finish_red = o["finish_red"].get<double>();
+		sprite->finish_green = o["finish_green"].get<double>();
+		sprite->finish_blue = o["finish_blue"].get<double>();
+		sprite->finish_sat = o["finish_sat"].get<double>();
+		sprite->tone_time_left = (int)o["tone_time_left"].get<double>();
 
 		return sprite;
 	}
@@ -343,6 +387,17 @@ private:
 
 	int old_map_x;
 	int old_map_y;
+
+	double current_red = 128.0;
+	double current_green = 128.0;
+	double current_blue = 128.0;
+	double current_sat = 128.0;
+
+	double finish_red = 100;
+	double finish_green = 100;
+	double finish_blue = 100;
+	double finish_sat = 100;
+	int tone_time_left = 0;
 
 	std::string file;
 };
@@ -614,6 +669,55 @@ static bool ShiftSpriteOpacityTo(const dyn_arg_list& args) {
 	return true;
 }
 
+static bool SetSpriteColor(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("set_sprite_color")
+
+	DYNRPG_CHECK_ARG_LENGTH(4)
+
+	DYNRPG_GET_STR_ARG(0, id)
+	DYNRPG_GET_INT_ARG(1, red)
+	DYNRPG_GET_INT_ARG(2, green)
+	DYNRPG_GET_INT_ARG(3, blue)
+
+	int sat = 100;
+
+	if (args.size() > 4) {
+		DYNRPG_GET_INT_ARG(4, s);
+		sat = s;
+	}
+
+	// ERRORCHK
+
+	graphics[id]->SetTone(Tone((int)(red * 128 / 100),
+		(int)(green * 128 / 100),
+		(int)(blue * 128 / 100),
+		(int)(sat * 128 / 100)));
+
+	return true;
+}
+
+static bool ShiftSpriteColorTo(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("shift_sprite_color_to")
+
+	DYNRPG_CHECK_ARG_LENGTH(6)
+
+	DYNRPG_GET_STR_ARG(0, id)
+	DYNRPG_GET_INT_ARG(1, red)
+	DYNRPG_GET_INT_ARG(2, green)
+	DYNRPG_GET_INT_ARG(3, blue)
+	DYNRPG_GET_INT_ARG(4, sat)
+	DYNRPG_GET_INT_ARG(5, ms)
+
+	// ERRORCHK
+
+	graphics[id]->SetToneEffect(Tone((int)(red * 128 / 100),
+		(int)(green * 128 / 100),
+		(int)(blue * 128 / 100),
+		(int)(sat * 128 / 100)), ms);
+
+	return true;
+}
+
 static bool SetZ(const dyn_arg_list& args) {
 	DYNRPG_FUNCTION("set_sprite_z")
 
@@ -700,8 +804,10 @@ void DynRpg::Rpgss::RegisterFunctions() {
 	DynRpg::RegisterFunction("stop_sprite_rotation", StopSpriteRotation);
 	DynRpg::RegisterFunction("set_sprite_opacity", SetSpriteOpacity);
 	DynRpg::RegisterFunction("shift_sprite_opacity_to", ShiftSpriteOpacityTo);
-	DynRpg::RegisterFunction("set_z", SetZ);
-	DynRpg::RegisterFunction("set_layer", SetLayer);
+	DynRpg::RegisterFunction("set_sprite_z", SetZ);
+	DynRpg::RegisterFunction("set_sprite_layer", SetLayer);
+	DynRpg::RegisterFunction("set_sprite_color", SetSpriteColor);
+	DynRpg::RegisterFunction("shift_sprite_color_to", ShiftSpriteColorTo);
 
 	// TODO : set/shift_sprite_color
 	// TODO : Rotation ist komisch
