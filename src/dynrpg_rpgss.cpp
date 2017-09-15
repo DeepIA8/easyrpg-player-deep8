@@ -200,6 +200,9 @@ public:
 			}
 			old_map_x = current_x * TILE_SIZE;
 			old_map_y = current_y * TILE_SIZE;
+
+			current_x = 0.0;
+			current_y = 0.0;
 		}
 	}
 
