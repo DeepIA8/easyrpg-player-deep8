@@ -29,8 +29,8 @@
 
 class RpgssSprite;
 
-constexpr int layer_mask = (1 << 20);
-constexpr int default_priority = Priority_Frame + layer_mask;
+constexpr int layer_mask = (5 << 16);
+constexpr int default_priority = Priority_Timer + layer_mask;
 
 namespace {
 	std::map<std::string, std::unique_ptr<RpgssSprite>> graphics;
@@ -134,6 +134,7 @@ public:
 
 		sprite->SetX(current_x);
 		sprite->SetY(current_y);
+		sprite->SetZ(z);
 		sprite->SetOx((int)(sprite->GetWidth() / 2));
 		sprite->SetOy((int)(sprite->GetHeight() / 2));
 		sprite->SetAngle(current_angle);
@@ -217,6 +218,10 @@ public:
 	}
 
 	void SetZ(int z) {
+		if (z != this->z) {
+			Graphics::UpdateZCallback();
+		}
+
 		this->z = z;
 	}
 
@@ -354,6 +359,7 @@ private:
 		}
 		sprite.reset(new Sprite());
 		sprite->SetBitmap(Bitmap::Create(file));
+		sprite->SetZ(default_priority);
 
 		return true;
 	}
@@ -445,7 +451,7 @@ static bool AddSprite(const dyn_arg_list& args) {
 		case 5:
 		{
 			DYNRPG_GET_INT_ARG(4, z)
-			graphic->SetZ(default_priority + z);
+			graphic->SetZ(default_priority + z + graphics.size());
 		}
 		case 4:
 		{
@@ -485,7 +491,10 @@ static bool SetSpriteBlendMode(const dyn_arg_list& args) {
 
 	Output::Post("blendmode %s", blendmode.c_str());
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	//graphics[id]->SetSprite(filename);
 
@@ -500,7 +509,10 @@ static bool SetSpriteImage(const dyn_arg_list& args) {
 	DYNRPG_GET_STR_ARG(0, id)
 	DYNRPG_GET_STR_ARG(1, filename)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetSprite(filename);
 
@@ -515,7 +527,10 @@ static bool BindSpriteTo(const dyn_arg_list& args) {
 	DYNRPG_GET_STR_ARG(0, id)
 	DYNRPG_GET_STR_ARG(1, coordsys)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetFixedTo(coordsys == "mouse" ? RpgssSprite::FixedTo_Mouse :
 		coordsys == "map" ? RpgssSprite::FixedTo_Map : RpgssSprite::FixedTo_Screen);
@@ -534,7 +549,10 @@ static bool MoveSpriteBy(const dyn_arg_list& args) {
 	DYNRPG_GET_INT_ARG(3, ms)
 	//DYNRPG_GET_INT_ARG(4, easing)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetRelativeMovementEffect(ox, oy, ms);
 
@@ -552,7 +570,10 @@ static bool MoveSpriteTo(const dyn_arg_list& args) {
 	DYNRPG_GET_INT_ARG(3, ms)
 	//DYNRPG_GET_INT_ARG(4, easing)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetMovementEffect(ox, oy, ms);
 
@@ -568,7 +589,10 @@ static bool ScaleSpriteTo(const dyn_arg_list& args) {
 	DYNRPG_GET_INT_ARG(1, scale)
 	DYNRPG_GET_INT_ARG(2, ms)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetZoomEffect(scale, ms);
 
@@ -584,7 +608,10 @@ static bool RotateSpriteBy(const dyn_arg_list& args) {
 	DYNRPG_GET_INT_ARG(1, angle)
 	DYNRPG_GET_INT_ARG(2, ms)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetRelativeRotationEffect(angle, ms);
 
@@ -601,7 +628,10 @@ static bool RotateSpriteTo(const dyn_arg_list& args) {
 	DYNRPG_GET_INT_ARG(2, angle)
 	DYNRPG_GET_INT_ARG(3, ms)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetRotationEffect(direction == "cw", angle, ms);
 
@@ -617,7 +647,10 @@ static bool RotateSpriteForever(const dyn_arg_list& args) {
 	DYNRPG_GET_STR_ARG(1, direction)
 	DYNRPG_GET_INT_ARG(2, ms)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetRotationForever(direction == "cw", ms);
 
@@ -631,7 +664,10 @@ static bool StopSpriteRotation(const dyn_arg_list& args) {
 
 	DYNRPG_GET_STR_ARG(0, id)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetRotationEffect(true, 0, 0);
 
@@ -646,7 +682,10 @@ static bool SetSpriteOpacity(const dyn_arg_list& args) {
 	DYNRPG_GET_STR_ARG(0, id)
 	DYNRPG_GET_INT_ARG(1, opacity)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetOpacity(opacity);
 
@@ -662,7 +701,10 @@ static bool ShiftSpriteOpacityTo(const dyn_arg_list& args) {
 	DYNRPG_GET_INT_ARG(1, opacity)
 	DYNRPG_GET_INT_ARG(2, ms)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetOpacityEffect(opacity, ms);
 
@@ -686,7 +728,10 @@ static bool SetSpriteColor(const dyn_arg_list& args) {
 		sat = s;
 	}
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetTone(Tone((int)(red * 128 / 100),
 		(int)(green * 128 / 100),
@@ -708,7 +753,10 @@ static bool ShiftSpriteColorTo(const dyn_arg_list& args) {
 	DYNRPG_GET_INT_ARG(4, sat)
 	DYNRPG_GET_INT_ARG(5, ms)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	graphics[id]->SetToneEffect(Tone((int)(red * 128 / 100),
 		(int)(green * 128 / 100),
@@ -726,9 +774,14 @@ static bool SetZ(const dyn_arg_list& args) {
 	DYNRPG_GET_STR_ARG(0, id)
 	DYNRPG_GET_INT_ARG(1, z)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
-	graphics[id]->SetZ(default_priority + z);
+	int layer_z = graphics[id]->GetZ() & 0xFFFF0000;
+
+	graphics[id]->SetZ(layer_z + z);
 
 	return true;
 }
@@ -741,7 +794,10 @@ static bool SetLayer(const dyn_arg_list& args) {
 	DYNRPG_GET_STR_ARG(0, id)
 	DYNRPG_GET_INT_ARG(1, layer)
 
-	// ERRORCHK
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
 
 	int z = 0;
 
@@ -778,9 +834,9 @@ static bool SetLayer(const dyn_arg_list& args) {
 			break;
 	}
 
-	int old_z = graphics[id]->GetZ() & 0xFFFF;
+	int old_z = graphics[id]->GetZ() & 0xFFFFFF;
 
-	graphics[id]->SetZ(z + layer_mask + old_z);
+	graphics[id]->SetZ(z + old_z);
 
 	return true;
 }
