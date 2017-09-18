@@ -29,8 +29,10 @@
 
 class RpgssSprite;
 
+// Lowest Z-order is drawn above. wtf
 constexpr int layer_mask = (5 << 16);
-constexpr int default_priority = Priority_Timer + layer_mask;
+constexpr int layer_offset = 0xFFFF / 2;
+constexpr int default_priority = Priority_Timer + layer_mask + layer_offset;
 
 namespace {
 	std::map<std::string, std::unique_ptr<RpgssSprite>> graphics;
@@ -121,10 +123,10 @@ public:
 		}
 
 		if (tone_time_left > 0)	{
-			interpolate(tone_time_left, current_red, finish_red);
-			interpolate(tone_time_left, current_green, finish_green);
-			interpolate(tone_time_left, current_blue, finish_blue);
-			interpolate(tone_time_left, current_sat, finish_sat);
+			current_red = interpolate(tone_time_left, current_red, finish_red);
+			current_green = interpolate(tone_time_left, current_green, finish_green);
+			current_blue = interpolate(tone_time_left, current_blue, finish_blue);
+			current_sat = interpolate(tone_time_left, current_sat, finish_sat);
 			--tone_time_left;
 		}
 
@@ -454,7 +456,7 @@ static bool AddSprite(const dyn_arg_list& args) {
 		case 5:
 		{
 			DYNRPG_GET_INT_ARG(4, z)
-			graphic->SetZ(default_priority + z + graphics.size());
+			graphic->SetZ(default_priority - z);
 		}
 		case 4:
 		{
@@ -616,7 +618,7 @@ static bool RotateSpriteBy(const dyn_arg_list& args) {
 		return true;
 	}
 
-	graphics[id]->SetRelativeRotationEffect(angle, ms);
+	graphics[id]->SetRelativeRotationEffect(-angle, ms);
 
 	return true;
 }
@@ -782,9 +784,9 @@ static bool SetZ(const dyn_arg_list& args) {
 		return true;
 	}
 
-	int layer_z = graphics[id]->GetZ() & 0xFFFF0000;
+	int layer_z = graphics[id]->GetZ() & 0xFFFF0000 + layer_offset;
 
-	graphics[id]->SetZ(layer_z + z);
+	graphics[id]->SetZ(layer_z - z);
 
 	return true;
 }
@@ -792,7 +794,7 @@ static bool SetZ(const dyn_arg_list& args) {
 static bool SetLayer(const dyn_arg_list& args) {
 	DYNRPG_FUNCTION("set_sprite_layer")
 
-	DYNRPG_CHECK_ARG_LENGTH(3)
+	DYNRPG_CHECK_ARG_LENGTH(2)
 
 	DYNRPG_GET_STR_ARG(0, id)
 	DYNRPG_GET_INT_ARG(1, layer)
@@ -837,7 +839,7 @@ static bool SetLayer(const dyn_arg_list& args) {
 			break;
 	}
 
-	int old_z = graphics[id]->GetZ() & 0xFFFFFF;
+	int old_z = graphics[id]->GetZ() & 0x00FFFFFF;
 
 	graphics[id]->SetZ(z + old_z);
 
