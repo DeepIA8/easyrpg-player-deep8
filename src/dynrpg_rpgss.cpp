@@ -159,6 +159,14 @@ public:
 	void SetMovementEffect(int x, int y, int ms) {
 		finish_x = (double)x;
 		finish_y = (double)y;
+
+		if (fixed_to == FixedTo_Map) {
+			double mx = Game_Map::GetDisplayX() / (double)TILE_SIZE;
+			finish_x -= mx;
+			double my =  Game_Map::GetDisplayY() / (double)TILE_SIZE;
+			finish_y -= my;
+		}
+
 		movement_time_left = frames(ms);
 	}
 
