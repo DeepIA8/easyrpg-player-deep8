@@ -358,6 +358,7 @@ void Player::Exit() {
 
 	Player::ResetGameObjects();
 	Font::Dispose();
+	DynRpg::Reset();
 	Graphics::Quit();
 	FileFinder::Quit();
 	Output::Quit();
