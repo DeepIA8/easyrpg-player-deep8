@@ -113,9 +113,14 @@ public:
 			--rotation_time_left;
 		}
 
-		if (zoom_time_left > 0) {
-			current_zoom = interpolate(zoom_time_left, current_zoom, finish_zoom);
-			--zoom_time_left;
+		if (zoom_x_time_left > 0) {
+			current_zoom_x = interpolate(zoom_x_time_left, current_zoom_x, finish_zoom_x);
+			--zoom_x_time_left;
+		}
+
+		if (zoom_y_time_left > 0) {
+			current_zoom_y = interpolate(zoom_y_time_left, current_zoom_y, finish_zoom_y);
+			--zoom_y_time_left;
 		}
 
 		if (opacity_time_left > 0) {
@@ -140,8 +145,8 @@ public:
 		sprite->SetOx((int)(sprite->GetWidth() / 2));
 		sprite->SetOy((int)(sprite->GetHeight() / 2));
 		sprite->SetAngle(current_angle);
-		sprite->SetZoomX(current_zoom / 100.0);
-		sprite->SetZoomY(current_zoom / 100.0);
+		sprite->SetZoomX(current_zoom_x / 100.0);
+		sprite->SetZoomY(current_zoom_y / 100.0);
 		sprite->SetOpacity((int)(current_opacity));
 		sprite->SetTone(Tone(current_red, current_green, current_blue, current_sat));
 		sprite->SetVisible(visible);
@@ -173,9 +178,14 @@ public:
 		rotate_cw = forward;
 	}
 
-	void SetZoomEffect(int new_zoom, int ms) {
-		finish_zoom = new_zoom;
-		zoom_time_left = frames(ms);
+	void SetZoomXEffect(int new_zoom, int ms) {
+		finish_zoom_x = new_zoom;
+		zoom_x_time_left = frames(ms);
+	}
+
+	void SetZoomYEffect(int new_zoom, int ms) {
+		finish_zoom_y = new_zoom;
+		zoom_y_time_left = frames(ms);
 	}
 
 	void SetOpacityEffect(int new_opacity, int ms) {
@@ -240,9 +250,14 @@ public:
 		rotate_forever_degree = 0.0;
 	}
 
-	void SetZoom(double zoom) {
-		current_zoom = zoom;
-		zoom_time_left = 0;
+	void SetZoomX(double zoom) {
+		current_zoom_x = zoom;
+		zoom_x_time_left = 0;
+	}
+
+	void SetZoomY(double zoom) {
+		current_zoom_y = zoom;
+		zoom_y_time_left = 0;
 	}
 
 	void SetVisible(bool v) {
@@ -263,9 +278,12 @@ public:
 		o["finish_x"] = picojson::value(finish_x);
 		o["finish_y"] = picojson::value(finish_y);
 		o["movement_time_left"] = picojson::value((double)movement_time_left);
-		o["current_zoom"] = picojson::value(current_zoom);
-		o["finish_zoom"] = picojson::value(finish_zoom);
-		o["zoom_time_left"] = picojson::value((double)zoom_time_left);
+		o["current_zoom_x"] = picojson::value(current_zoom_x);
+		o["finish_zoom_x"] = picojson::value(finish_zoom_x);
+		o["zoom_x_time_left"] = picojson::value((double)zoom_x_time_left);
+		o["current_zoom_y"] = picojson::value(current_zoom_y);
+		o["finish_zoom_y"] = picojson::value(finish_zoom_y);
+		o["zoom_y_time_left"] = picojson::value((double)zoom_y_time_left);
 		o["current_angle"] = picojson::value(current_angle);
 		o["finish_angle"] = picojson::value(finish_angle);
 		o["rotation_time_left"] = picojson::value((double)rotation_time_left);
@@ -303,9 +321,12 @@ public:
 		sprite->finish_x = o["finish_x"].get<double>();
 		sprite->finish_y = o["finish_y"].get<double>();
 		sprite->movement_time_left = (int)o["movement_time_left"].get<double>();
-		sprite->current_zoom = o["current_zoom"].get<double>();
-		sprite->finish_zoom = o["finish_zoom"].get<double>();
-		sprite->zoom_time_left = (int)o["zoom_time_left"].get<double>();
+		sprite->current_zoom_x = o["current_zoom_x"].get<double>();
+		sprite->finish_zoom_x = o["finish_zoom_x"].get<double>();
+		sprite->zoom_x_time_left = (int)o["zoom_x_time_left"].get<double>();
+		sprite->current_zoom_y = o["current_zoom_y"].get<double>();
+		sprite->finish_zoom_y = o["finish_zoom_y"].get<double>();
+		sprite->zoom_y_time_left = (int)o["zoom_y_time_left"].get<double>();
 		sprite->current_angle = o["current_angle"].get<double>();
 		sprite->finish_angle = o["finish_angle"].get<double>();
 		sprite->rotation_time_left = (int)o["rotation_time_left"].get<double>();
@@ -342,7 +363,8 @@ private:
 		current_x = 160.0;
 		current_y = 120.0;
 		z = default_priority;
-		current_zoom = 100.0;
+		current_zoom_x = 100.0;
+		current_zoom_y = 100.0;
 
 		old_map_x = Game_Map::GetDisplayX();
 		old_map_y = Game_Map::GetDisplayY();
@@ -374,9 +396,12 @@ private:
 	double finish_x = 0.0;
 	double finish_y = 0.0;
 	int movement_time_left = 0;
-	double current_zoom = 100.0;
-	double finish_zoom = 0.0;
-	int zoom_time_left = 0;
+	double current_zoom_x = 100.0;
+	double finish_zoom_x = 0.0;
+	int zoom_x_time_left = 0;
+	double current_zoom_y = 100.0;
+	double finish_zoom_y = 0.0;
+	int zoom_y_time_left = 0;
 	double current_angle = 0.0;
 	double finish_angle = 0.0;
 	int rotation_time_left = 0;
@@ -436,7 +461,8 @@ static bool AddSprite(const dyn_arg_list& args) {
 		case 8:
 		{
 			DYNRPG_GET_FLOAT_ARG(7, scale)
-			graphic->SetZoom(scale);
+			graphic->SetZoomX(scale);
+			graphic->SetZoomY(scale);
 		}
 		case 7:
 		{
@@ -576,7 +602,47 @@ static bool ScaleSpriteTo(const dyn_arg_list& args) {
 
 	// ERRORCHK
 
-	graphics[id]->SetZoomEffect(scale, ms);
+	graphics[id]->SetZoomXEffect(scale, ms);
+	graphics[id]->SetZoomYEffect(scale, ms);
+
+	return true;
+}
+
+static bool ScaleXSpriteTo(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("scale_x_sprite_to")
+
+	DYNRPG_CHECK_ARG_LENGTH(3)
+
+	DYNRPG_GET_STR_ARG(0, id)
+	DYNRPG_GET_INT_ARG(1, scale)
+	DYNRPG_GET_INT_ARG(2, ms)
+
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
+
+	graphics[id]->SetZoomXEffect(scale, ms);
+
+	return true;
+}
+
+
+static bool ScaleYSpriteTo(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("scale_y_sprite_to")
+
+	DYNRPG_CHECK_ARG_LENGTH(3)
+
+	DYNRPG_GET_STR_ARG(0, id)
+	DYNRPG_GET_INT_ARG(1, scale)
+	DYNRPG_GET_INT_ARG(2, ms)
+
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
+
+	graphics[id]->SetZoomYEffect(scale, ms);
 
 	return true;
 }
@@ -806,6 +872,8 @@ void DynRpg::Rpgss::RegisterFunctions() {
 	DynRpg::RegisterFunction("move_sprite_by", MoveSpriteBy);
 	DynRpg::RegisterFunction("move_sprite_to", MoveSpriteTo);
 	DynRpg::RegisterFunction("scale_sprite_to", ScaleSpriteTo);
+	DynRpg::RegisterFunction("scale_x_sprite_to", ScaleXSpriteTo);
+	DynRpg::RegisterFunction("scale_y_sprite_to", ScaleYSpriteTo);
 	DynRpg::RegisterFunction("rotate_sprite_by", RotateSpriteBy);
 	DynRpg::RegisterFunction("rotate_sprite_to", RotateSpriteTo);
 	DynRpg::RegisterFunction("rotate_sprite_forever", RotateSpriteForever);
