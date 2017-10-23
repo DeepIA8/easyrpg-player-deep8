@@ -153,7 +153,10 @@ public:
 	}
 
 	void SetRelativeMovementEffect(int ox, int oy, int ms) {
-		SetMovementEffect(ox + current_x, oy + current_y, ms);
+		finish_x = (double)ox + current_x;
+		finish_y = (double)oy + current_y;
+
+		movement_time_left = frames(ms);
 	}
 
 	void SetMovementEffect(int x, int y, int ms) {
