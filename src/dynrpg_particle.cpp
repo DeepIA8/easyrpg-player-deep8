@@ -1487,7 +1487,7 @@ static bool load_effect(const dyn_arg_list& args) {
 static bool SetZ(const dyn_arg_list& args) {
 	DYNRPG_FUNCTION("pfx_set_z")
 
-	DYNRPG_CHECK_ARG_LENGTH(3)
+	DYNRPG_CHECK_ARG_LENGTH(2)
 
 	DYNRPG_GET_STR_ARG(0, tag)
 	DYNRPG_GET_INT_ARG(1, z)
