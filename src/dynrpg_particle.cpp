@@ -35,6 +35,12 @@
 #include "main_data.h"
 #include "graphics.h"
 
+// Lowest Z-order is drawn above. wtf
+// Follows the logic of RPGSS to prevent confusion
+constexpr int layer_mask = (5 << 16);
+constexpr int layer_offset = 0xFFFF / 2;
+constexpr int default_priority = Priority_Timer + layer_mask + layer_offset;
+
 class ParticleEffect;
 
 namespace {
@@ -122,9 +128,6 @@ protected:
 	void alloc_rgb();
 	void update_color();
 	static float sin_lut[32];
-
-	const static int layer_mask = (10 << 16);
-	const static int default_priority = Priority_Timer + layer_mask;
 
 	int z = default_priority;
 };
@@ -1481,6 +1484,83 @@ static bool load_effect(const dyn_arg_list& args) {
 	return true;
 }
 
+static bool SetZ(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("pfx_set_z")
+
+	DYNRPG_CHECK_ARG_LENGTH(3)
+
+	DYNRPG_GET_STR_ARG(0, tag)
+	DYNRPG_GET_INT_ARG(1, z)
+
+	ptag_t::iterator itr = pfx_list.find(tag);
+	if (itr == pfx_list.end()) {
+		Output::Debug("DynParticle: Particle not found %s", tag.c_str());
+		return true;
+	}
+
+	int layer_z = itr->second->GetZ() & 0xFFFF0000 + layer_offset;
+
+	itr->second->SetZ(layer_z - z);
+
+	return true;
+}
+
+static bool SetLayer(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("pfx_set_layer")
+
+	DYNRPG_CHECK_ARG_LENGTH(2)
+
+	DYNRPG_GET_STR_ARG(0, tag)
+	DYNRPG_GET_INT_ARG(1, layer)
+
+	ptag_t::iterator itr = pfx_list.find(tag);
+	if (itr == pfx_list.end()) {
+		Output::Debug("DynParticle: Particle not found %s", tag.c_str());
+		return true;
+	}
+
+	int z = 0;
+
+	switch (layer) {
+		case 1:
+			z = Priority_Background;
+			break;
+		case 2:
+			z = Priority_TilesetBelow;
+			break;
+		case 3:
+			z = Priority_EventsBelow;
+			break;
+		case 4:
+			z = Priority_Player;
+			break;
+		case 5:
+			z = Priority_TilesetAbove;
+			break;
+		case 6:
+			z = Priority_EventsAbove;
+			break;
+		case 7:
+			z = Priority_PictureNew;
+			break;
+		case 8:
+			z = Priority_BattleAnimation;
+			break;
+		case 9:
+			z = Priority_Window;
+			break;
+		case 10:
+			z = Priority_Timer;
+			break;
+	}
+
+	int old_z = itr->second->GetZ() & 0x00FFFFFF;
+
+	itr->second->SetZ(z + old_z);
+
+	return true;
+}
+
 void DynRpg::Particle::RegisterFunctions() {
 	ParticleEffect::create_trig_lut();
 	DynRpg::RegisterFunction("pfx_destroy_all", destroy_all);
@@ -1511,6 +1591,8 @@ void DynRpg::Particle::RegisterFunctions() {
 	DynRpg::RegisterFunction("pfx_use_screen_relative", use_screen_relative);
 	DynRpg::RegisterFunction("pfx_unload_texture", unload_texture);
 	DynRpg::RegisterFunction("pfx_load_effect", load_effect);
+	DynRpg::RegisterFunction("pfx_set_z", SetZ);
+	DynRpg::RegisterFunction("pfx_set_layer", SetLayer);
 }
 
 void DynRpg::Particle::Update() {
