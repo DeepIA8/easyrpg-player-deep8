@@ -36,6 +36,107 @@ constexpr int default_priority = Priority_Timer + layer_mask + layer_offset;
 
 namespace {
 	std::map<std::string, std::unique_ptr<RpgssSprite>> graphics;
+	std::map<std::string, std::function<double(double, double, double, double)>> easing_funcs;
+
+	// via http://www.gizma.com/easing/
+	// via https://gist.github.com/Metallix/628de265d0a24e0c4acb
+	// t - current time
+	// b - initial value
+	// c - relative change to initial value
+	// d - duration
+	double linear_easing(double t, double b, double c, double d) {
+		return c*t/d + b;
+	}
+
+	double quadratic_in_easing(double t, double b, double c, double d) {
+		t = t / d;
+		return c*t*t + b;
+	}
+
+	double quadratic_out_easing(double t, double b, double c, double d) {
+		t = t / d;
+		return -c * t*(t-2) + b;
+	}
+
+	double quadratic_in_out_easing(double t, double b, double c, double d) {
+		t = t / (d / 2);
+		if (t < 1) {
+			return c / 2 * t * t + b;
+		} else {
+			t = t - 1;
+			return -c / 2 * (t * (t - 2) - 1) + b;
+		}
+	}
+
+	double cubic_in_easing(double t, double b, double c, double d) {
+		t = t / d;
+		return c*t*t*t + b;
+	}
+
+	double cubic_out_easing(double t, double b, double c, double d) {
+		t = (t / d) - 1;
+		return c*(t*t*t + 1) + b;
+	}
+
+	double cubic_in_out_easing(double t, double b, double c, double d) {
+		t /= (d / 2);
+		if (t < 1) {
+			return c / 2 * t * t * t + b;
+		} else {
+			t -= 2;
+			return c / 2 * (t * t * t + 2) + b;
+		}
+	}
+
+	double sinusoidal_in_easing(double t, double b, double c, double d) {
+		return -c * cos(t/d * (M_PI/2)) + c + b;
+	}
+
+	double sinusoidal_out_easing(double t, double b, double c, double d) {
+		return c * sin(t/d * (M_PI/2)) + b;
+	}
+
+	double sinusoidal_in_out_easing(double t, double b, double c, double d) {
+		return -c/2 * (cos(M_PI*t/d) - 1) + b;
+	}
+
+	double exponential_in_easing(double t, double b, double c, double d) {
+		return c * pow(2, 10 * (t/d - 1)) + b;
+	}
+
+	double exponential_out_easing(double t, double b, double c, double d) {
+		return c * (-pow(2, -10 * t/d) + 1) + b;
+	}
+
+	double exponential_in_out_easing(double t, double b, double c, double d) {
+		t = t / (d / 2);
+		if (t < 1) {
+			return c / 2 * pow(2, 10 * (t - 1)) + b;
+		} else {
+			t = t - 1;
+			return c / 2 * (-pow(2, -10 * t) + 2) + b;
+		}
+	}
+
+	double circular_in_easing(double t, double b, double c, double d) {
+		t = t / d;
+		return -c * (sqrt(1 - t*t) - 1) + b;
+	}
+
+	double circular_out_easing(double t, double b, double c, double d) {
+		t = (t / d) - 1;
+		return c * sqrt(1 - t*t) + b;
+	}
+
+	double circular_in_out_easing(double t, double b, double c, double d) {
+		t = t / (d / 2);
+		if (t < 1) {
+			return -c/2 * (sqrt(1 - t * t) - 1) + b;
+		} else {
+			t = t - 2;
+			return c/2 * (sqrt(1 - t * t) + 1) + b;
+		}
+	}
 }
 
 class RpgssSprite {
@@ -100,10 +201,16 @@ public:
 			old_map_y = Game_Map::GetDisplayY();
 		}
 
-		if (movement_time_left > 0) {
-			current_x = interpolate(movement_time_left, current_x, finish_x);
-			current_y = interpolate(movement_time_left, current_y, finish_y);
-			--movement_time_left;
+		if (easing.empty()) {
+			easing = "linear";
+		}
+
+		auto interpolate_easing = easing_funcs[easing];
+
+		if (movement_time_current < movement_time_end) {
+			++movement_time_current;
+			current_x = interpolate_easing(movement_time_current, movement_start_x, finish_x - movement_start_x, movement_time_end);
+			current_y = interpolate_easing(movement_time_current, movement_start_y, finish_y - movement_start_y, movement_time_end);
 		}
 
 		if (rotation_time_left > 0) {
@@ -152,14 +259,39 @@ public:
 		sprite->SetVisible(visible);
 	}
 
-	void SetRelativeMovementEffect(int ox, int oy, int ms) {
+	void SetRelativeMovementEffect(int ox, int oy, int ms, const std::string& easing_) {
+		easing = easing_;
+
+		if (easing.empty()) {
+			easing = "linear";
+		}
+
+		if (easing_funcs.find(easing) == easing_funcs.end()) {
+			Output::Warning("RPGSS: Unsupported easing mode %s", easing.c_str());
+			easing = "linear";
+		}
+
 		finish_x = (double)ox + current_x;
 		finish_y = (double)oy + current_y;
 
-		movement_time_left = frames(ms);
+		movement_start_x = current_x;
+		movement_start_y = current_y;
+		movement_time_current = 0;
+		movement_time_end = frames(ms);
 	}
 
-	void SetMovementEffect(int x, int y, int ms) {
+	void SetMovementEffect(int x, int y, int ms, const std::string& easing_) {
+		easing = easing_;
+
+		if (easing.empty()) {
+			easing = "linear";
+		}
+
+		if (easing_funcs.find(easing) == easing_funcs.end()) {
+			Output::Warning("RPGSS: Unsupported easing mode %s", easing.c_str());
+			easing = "linear";
+		}
+
 		finish_x = (double)x;
 		finish_y = (double)y;
 
@@ -170,7 +302,10 @@ public:
 			finish_y -= my;
 		}
 
-		movement_time_left = frames(ms);
+		movement_start_x = current_x;
+		movement_start_y = current_y;
+		movement_time_current = 0;
+		movement_time_end = frames(ms);
 	}
 
 	void SetRelativeRotationEffect(double angle, int ms) {
@@ -231,12 +366,14 @@ public:
 
 	void SetX(int x) {
 		current_x = x;
-		movement_time_left = 0;
+		movement_time_current = 0;
+		movement_time_end = 0;
 	}
 
 	void SetY(int y) {
 		current_y = y;
-		movement_time_left = 0;
+		movement_time_current = 0;
+		movement_time_end = 0;
 	}
 
 	int GetZ() {
@@ -292,7 +429,10 @@ public:
 		o["current_y"] = picojson::value(current_y);
 		o["finish_x"] = picojson::value(finish_x);
 		o["finish_y"] = picojson::value(finish_y);
-		o["movement_time_left"] = picojson::value((double)movement_time_left);
+		o["movement_start_x"] = picojson::value(movement_start_x);
+		o["movement_start_y"] = picojson::value(movement_start_y);
+		o["movement_time_end"] = picojson::value((double)movement_time_end);
+		o["movement_time_current"] = picojson::value((double)movement_time_current);
 		o["current_zoom_x"] = picojson::value(current_zoom_x);
 		o["finish_zoom_x"] = picojson::value(finish_zoom_x);
 		o["zoom_x_time_left"] = picojson::value((double)zoom_x_time_left);
@@ -322,6 +462,7 @@ public:
 		o["finish_blue"] = picojson::value(finish_blue);
 		o["finish_sat"] = picojson::value(finish_sat);
 		o["tone_time_left"] = picojson::value((double)tone_time_left);
+		o["easing"] = picojson::value(easing);
 
 		return o;
 	}
@@ -335,7 +476,10 @@ public:
 		sprite->current_y = o["current_y"].get<double>();
 		sprite->finish_x = o["finish_x"].get<double>();
 		sprite->finish_y = o["finish_y"].get<double>();
-		sprite->movement_time_left = (int)o["movement_time_left"].get<double>();
+		sprite->movement_start_x = o["movement_start_x"].get<double>();
+		sprite->movement_start_y = o["movement_start_y"].get<double>();
+		sprite->movement_time_end = (int)o["movement_time_end"].get<double>();
+		sprite->movement_time_current = (int)o["movement_time_current"].get<double>();
 		sprite->current_zoom_x = o["current_zoom_x"].get<double>();
 		sprite->finish_zoom_x = o["finish_zoom_x"].get<double>();
 		sprite->zoom_x_time_left = (int)o["zoom_x_time_left"].get<double>();
@@ -365,6 +509,7 @@ public:
 		sprite->finish_blue = o["finish_blue"].get<double>();
 		sprite->finish_sat = o["finish_sat"].get<double>();
 		sprite->tone_time_left = (int)o["tone_time_left"].get<double>();
+		sprite->easing = o["easing"].get<std::string>();
 
 		return sprite;
 	}
@@ -383,6 +528,8 @@ private:
 
 		old_map_x = Game_Map::GetDisplayX();
 		old_map_y = Game_Map::GetDisplayY();
+
+		easing = "linear";
 	}
 
 	bool SetSpriteImage(const std::string& filename) {
@@ -411,7 +558,10 @@ private:
 	double current_y = 0.0;
 	double finish_x = 0.0;
 	double finish_y = 0.0;
-	int movement_time_left = 0;
+	double movement_start_x = 0.0;
+	double movement_start_y = 0.0;
+	int movement_time_end = 0;
+	int movement_time_current = 0;
 	double current_zoom_x = 100.0;
 	double finish_zoom_x = 0.0;
 	int zoom_x_time_left = 0;
@@ -445,6 +595,8 @@ private:
 	double finish_blue = 100;
 	double finish_sat = 100;
 	int tone_time_left = 0;
+
+	std::string easing = "linear";
 
 	std::string file;
 };
@@ -589,14 +741,18 @@ static bool MoveSpriteBy(const dyn_arg_list& args) {
 	DYNRPG_GET_INT_ARG(1, ox)
 	DYNRPG_GET_INT_ARG(2, oy)
 	DYNRPG_GET_INT_ARG(3, ms)
-	//DYNRPG_GET_INT_ARG(4, easing)
 
 	if (graphics.find(id) == graphics.end()) {
 		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
 		return true;
 	}
 
-	graphics[id]->SetRelativeMovementEffect(ox, oy, ms);
+	if (args.size() >= 5) {
+		DYNRPG_GET_STR_ARG(4, easing)
+		graphics[id]->SetRelativeMovementEffect(ox, oy, ms, easing);
+	} else {
+		graphics[id]->SetRelativeMovementEffect(ox, oy, ms, "linear");
+	}
 
 	return true;
 }
@@ -610,14 +766,18 @@ static bool MoveSpriteTo(const dyn_arg_list& args) {
 	DYNRPG_GET_INT_ARG(1, ox)
 	DYNRPG_GET_INT_ARG(2, oy)
 	DYNRPG_GET_INT_ARG(3, ms)
-	//DYNRPG_GET_INT_ARG(4, easing)
 
 	if (graphics.find(id) == graphics.end()) {
 		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
 		return true;
 	}
 
-	graphics[id]->SetMovementEffect(ox, oy, ms);
+	if (args.size() >= 5) {
+		DYNRPG_GET_STR_ARG(4, easing)
+		graphics[id]->SetMovementEffect(ox, oy, ms, easing);
+	} else {
+		graphics[id]->SetMovementEffect(ox, oy, ms, "linear");
+	}
 
 	return true;
 }
@@ -949,10 +1109,22 @@ void DynRpg::Rpgss::RegisterFunctions() {
 	DynRpg::RegisterFunction("set_sprite_color", SetSpriteColor);
 	DynRpg::RegisterFunction("shift_sprite_color_to", ShiftSpriteColorTo);
 
-	// TODO : set/shift_sprite_color
-	// TODO : Rotation ist komisch
-	// set_sprite_color(name, r, g, b)
-	// shift_sprite_color_to(name, r, g, b)
+	easing_funcs["linear"] = linear_easing;
+	easing_funcs["quadratic in"] = quadratic_in_easing;
+	easing_funcs["quadratic out"] = quadratic_out_easing;
+	easing_funcs["quadratic in/out"] = quadratic_in_out_easing;
+	easing_funcs["cubic in"] = cubic_in_easing;
+	easing_funcs["cubic out"] = cubic_out_easing;
+	easing_funcs["cubic in/out"] = cubic_in_out_easing;
+	easing_funcs["sinusoidal in"] = sinusoidal_in_easing;
+	easing_funcs["sinusoidal out"] = sinusoidal_out_easing;
+	easing_funcs["sinusoidal in/out"] = sinusoidal_in_out_easing;
+	easing_funcs["exponential in"] = exponential_in_easing;
+	easing_funcs["exponential out"] = exponential_out_easing;
+	easing_funcs["exponential in/out"] = exponential_in_out_easing;
+	easing_funcs["circular in"] = circular_in_easing;
+	easing_funcs["circular out"] = circular_out_easing;
+	easing_funcs["circular in/out"] = circular_in_out_easing;
 }
 
 void DynRpg::Rpgss::Update() {
@@ -963,6 +1135,8 @@ void DynRpg::Rpgss::Update() {
 
 DynRpg::Rpgss::~Rpgss() {
 	graphics.clear();
+
+	easing_funcs.clear();
 }
 
 void DynRpg::Rpgss::Load(const std::vector<uint8_t> &in) {
