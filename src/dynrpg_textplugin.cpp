@@ -126,12 +126,16 @@ public:
 	}
 
 	void Update() {
-		const Sprite* sprite = Main_Data::game_screen->GetPicture(pic_id)->GetSprite();
+		Game_Picture* pic = Main_Data::game_screen->GetPicture(pic_id);
 
-		if (sprite) {
-			if (z != sprite->GetZ()) {
-				z = sprite->GetZ() + 1;
-				Graphics::UpdateZCallback();
+		if (pic) {
+			const Sprite *sprite = Main_Data::game_screen->GetPicture(pic_id)->GetSprite();
+
+			if (sprite) {
+				if (z != sprite->GetZ()) {
+					z = sprite->GetZ() + 1;
+					Graphics::UpdateZCallback();
+				}
 			}
 		}
 	}
