@@ -116,7 +116,7 @@ public:
 	};
 
 	void Update() {
-		const Sprite* sprite = Main_Data::game_pictures->GetPicture(pic_id).GetSprite();
+		const Sprite *sprite = Main_Data::game_pictures->GetPicture(pic_id).GetSprite();
 
 		if (sprite) {
 			if (z != sprite->GetZ()) {
