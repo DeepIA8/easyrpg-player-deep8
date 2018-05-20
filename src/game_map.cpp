@@ -44,6 +44,7 @@
 #include "player.h"
 #include "input.h"
 #include "utils.h"
+#include "dynrpg.h"
 
 namespace {
 	constexpr int default_pan_x = 9 * SCREEN_TILE_SIZE;
@@ -132,6 +133,8 @@ void Game_Map::Dispose() {
 
 	map.reset();
 	animation.reset();
+
+	DynRpg::OnMapChange();
 }
 
 void Game_Map::Quit() {
