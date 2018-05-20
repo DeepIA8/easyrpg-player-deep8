@@ -362,7 +362,7 @@ void create_all_plugins() {
 	plugins.emplace_back(new DynRpg::Pec());
 	plugins.emplace_back(new DynRpg::Particle());
 	plugins.emplace_back(new DynRpg::Rpgss());
-	
+
 	for (auto& plugin : plugins) {
 		plugin->RegisterFunctions();
 	}
@@ -691,5 +691,11 @@ void DynRpg::Reset() {
 	init = false;
 	dyn_rpg_functions.clear();
 	plugins.clear();
+}
+
+void DynRpg::OnMapChange() {
+	for (auto& plugin : plugins) {
+		plugin->OnMapChange();
+	}
 }
 

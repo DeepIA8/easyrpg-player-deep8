@@ -42,6 +42,7 @@
 #include "player.h"
 #include "input.h"
 #include "utils.h"
+#include "dynrpg.h"
 
 namespace {
 	RPG::SaveMapInfo& map_info = Main_Data::game_data.map_info;
@@ -122,6 +123,8 @@ void Game_Map::Dispose() {
 
 	map.reset();
 	animation.reset();
+
+	DynRpg::OnMapChange();
 }
 
 void Game_Map::Quit() {

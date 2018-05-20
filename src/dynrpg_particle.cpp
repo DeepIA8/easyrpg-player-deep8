@@ -1621,6 +1621,10 @@ void DynRpg::Particle::Update() {
 }
 
 DynRpg::Particle::~Particle() {
+	OnMapChange();
+}
+
+void DynRpg::Particle::OnMapChange() {
 	ptag_t::iterator itr = pfx_list.begin();
 	while (itr != pfx_list.end()) {
 		itr->second->clear();
