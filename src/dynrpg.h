@@ -129,6 +129,8 @@ namespace DynRpg {
 			*parse_okay = okay;
 		return t;
 	}
+
+	void OnMapChange();
 }
 
 class DynRpgPlugin {
@@ -143,8 +145,15 @@ public:
 	virtual void Load(const std::vector<uint8_t>&) {}
 	virtual std::vector<uint8_t> Save() { return {}; }
 
+<<<<<<< HEAD
 private:
 	std::string identifier;
+=======
+	virtual void OnMapChange() {};
+
+protected:
+	DynRpgPlugin() {}
+>>>>>>> f207aada... DynRPG Deep8: Clear sprites and particles on map change
 };
 
 #endif

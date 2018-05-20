@@ -30,6 +30,8 @@ namespace DynRpg {
 
 		void RegisterFunctions();
 		void Update();
+
+		void OnMapChange();
 	};
 }
 

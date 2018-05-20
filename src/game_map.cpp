@@ -50,6 +50,7 @@
 #include <lcf/scope_guard.h>
 #include <lcf/rpg/save.h>
 #include "scene_gameover.h"
+#include "dynrpg.h"
 
 namespace {
 	lcf::rpg::SaveMapInfo map_info;
@@ -112,6 +113,8 @@ void Game_Map::Dispose() {
 	map.reset();
 	map_info = {};
 	panorama = {};
+
+	DynRpg::OnMapChange();
 }
 
 void Game_Map::Quit() {

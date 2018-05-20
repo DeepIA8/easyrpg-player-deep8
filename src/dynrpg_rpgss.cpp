@@ -1115,3 +1115,7 @@ std::vector<uint8_t> DynRpg::Rpgss::Save() {
 
 	return v;
 }
+
+void DynRpg::Rpgss::OnMapChange() {
+	graphics.clear();
+}
