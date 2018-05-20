@@ -48,6 +48,7 @@
 #include "utils.h"
 #include "scope_guard.h"
 #include "scene_gameover.h"
+#include "dynrpg.h"
 
 namespace {
 	constexpr int default_pan_x = 9 * SCREEN_TILE_SIZE;
@@ -128,6 +129,8 @@ void Game_Map::Dispose() {
 	events.clear();
 	pending.clear();
 	map.reset();
+
+	DynRpg::OnMapChange();
 }
 
 void Game_Map::Quit() {

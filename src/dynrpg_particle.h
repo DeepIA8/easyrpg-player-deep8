@@ -30,6 +30,8 @@ namespace DynRpg {
 		std::string GetIdentifier();
 		void RegisterFunctions();
 		void Update();
+
+		void OnMapChange();
 	};
 }
 

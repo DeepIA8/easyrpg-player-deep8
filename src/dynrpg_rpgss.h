@@ -30,6 +30,8 @@ namespace DynRpg {
 		void Update();
 		void Load(const std::vector<uint8_t>& in);
 		std::vector<uint8_t> Save();
+
+		void OnMapChange();
 	};
 }
 
