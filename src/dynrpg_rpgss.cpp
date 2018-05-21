@@ -16,6 +16,8 @@
  */
 
 // Headers
+#define _USE_MATH_DEFINES
+#include <cmath>
 #include <map>
 
 #include "dynrpg_rpgss.h"
