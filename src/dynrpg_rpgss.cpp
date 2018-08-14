@@ -212,8 +212,9 @@ public:
 
 		if (movement_time_current < movement_time_end) {
 			++movement_time_current;
-			current_x = interpolate_easing(movement_time_current, movement_start_x, finish_x - movement_start_x, movement_time_end);
-			current_y = interpolate_easing(movement_time_current, movement_start_y, finish_y - movement_start_y, movement_time_end);
+			movement_current_x = interpolate_easing(movement_time_current, movement_start_x, movement_finish_x - movement_start_x, movement_time_end);
+			movement_current_y = interpolate_easing(movement_time_current, movement_start_y, movement_finish_y - movement_start_y, movement_time_end);
+			printf("%f %f\n", movement_current_x, movement_current_y);
 		}
 
 		if (rotation_time_left > 0) {
@@ -249,8 +250,8 @@ public:
 			current_angle += (rotate_cw ? 1 : -1) * rotate_forever_degree;
 		}
 
-		sprite->SetX(current_x);
-		sprite->SetY(current_y);
+		sprite->SetX(movement_current_x);
+		sprite->SetY(movement_current_y);
 		sprite->SetOx((int)(sprite->GetWidth() / 2));
 		sprite->SetOy((int)(sprite->GetHeight() / 2));
 		sprite->SetAngle(current_angle);
@@ -273,11 +274,11 @@ public:
 			easing = "linear";
 		}
 
-		finish_x = (double)ox + current_x;
-		finish_y = (double)oy + current_y;
+		movement_finish_x = (double)ox + movement_current_x;
+		movement_finish_y = (double)oy + movement_current_y;
 
-		movement_start_x = current_x;
-		movement_start_y = current_y;
+		movement_start_x = movement_current_x;
+		movement_start_y = movement_current_y;
 		movement_time_current = 0;
 		movement_time_end = frames(ms);
 	}
@@ -294,18 +295,18 @@ public:
 			easing = "linear";
 		}
 
-		finish_x = (double)x;
-		finish_y = (double)y;
+		movement_finish_x = (double)x;
+		movement_finish_y = (double)y;
 
 		if (fixed_to == FixedTo_Map) {
 			double mx = Game_Map::GetDisplayX() / (double)TILE_SIZE;
-			finish_x -= mx;
+			movement_finish_x -= mx;
 			double my =  Game_Map::GetDisplayY() / (double)TILE_SIZE;
-			finish_y -= my;
+			movement_finish_y -= my;
 		}
 
-		movement_start_x = current_x;
-		movement_start_y = current_y;
+		movement_start_x = movement_current_x;
+		movement_start_y = movement_current_y;
 		movement_time_current = 0;
 		movement_time_end = frames(ms);
 	}
@@ -358,22 +359,22 @@ public:
 			if (!sprite) {
 				return;
 			}
-			old_map_x = current_x * TILE_SIZE;
-			old_map_y = current_y * TILE_SIZE;
+			old_map_x = movement_current_x * TILE_SIZE;
+			old_map_y = movement_current_y * TILE_SIZE;
 
-			current_x = 0.0;
-			current_y = 0.0;
+			movement_current_x = 0.0;
+			movement_current_y = 0.0;
 		}
 	}
 
 	void SetX(int x) {
-		current_x = x;
+		movement_current_x = x;
 		movement_time_current = 0;
 		movement_time_end = 0;
 	}
 
 	void SetY(int y) {
-		current_y = y;
+		movement_current_y = y;
 		movement_time_current = 0;
 		movement_time_end = 0;
 	}
@@ -423,10 +424,10 @@ public:
 		picojson::object o;
 		o["blendmode"] = picojson::value((double)blendmode);
 		o["fixed_to"] = picojson::value((double)fixed_to);
-		o["current_x"] = picojson::value(current_x);
-		o["current_y"] = picojson::value(current_y);
-		o["finish_x"] = picojson::value(finish_x);
-		o["finish_y"] = picojson::value(finish_y);
+		o["current_x"] = picojson::value(movement_current_x);
+		o["current_y"] = picojson::value(movement_current_y);
+		o["finish_x"] = picojson::value(movement_finish_x);
+		o["finish_y"] = picojson::value(movement_finish_y);
 		o["movement_start_x"] = picojson::value(movement_start_x);
 		o["movement_start_y"] = picojson::value(movement_start_y);
 		o["movement_time_end"] = picojson::value((double)movement_time_end);
@@ -470,10 +471,10 @@ public:
 
 		sprite->blendmode = (int)(o["blendmode"].get<double>());
 		sprite->fixed_to = (int)(o["fixed_to"].get<double>());
-		sprite->current_x = o["current_x"].get<double>();
-		sprite->current_y = o["current_y"].get<double>();
-		sprite->finish_x = o["finish_x"].get<double>();
-		sprite->finish_y = o["finish_y"].get<double>();
+		sprite->movement_current_x = o["current_x"].get<double>();
+		sprite->movement_current_y = o["current_y"].get<double>();
+		sprite->movement_finish_x = o["finish_x"].get<double>();
+		sprite->movement_finish_y = o["finish_y"].get<double>();
 		sprite->movement_start_x = o["movement_start_x"].get<double>();
 		sprite->movement_start_y = o["movement_start_y"].get<double>();
 		sprite->movement_time_end = (int)o["movement_time_end"].get<double>();
@@ -518,8 +519,8 @@ private:
 			return;
 		}
 
-		current_x = 160.0;
-		current_y = 120.0;
+		movement_current_x = 160.0;
+		movement_current_y = 120.0;
 		z = default_priority;
 		current_zoom_x = 100.0;
 		current_zoom_y = 100.0;
@@ -551,10 +552,10 @@ private:
 	int blendmode = BlendMode_Mix;
 	int fixed_to = FixedTo_Screen;
 
-	double current_x = 0.0;
-	double current_y = 0.0;
-	double finish_x = 0.0;
-	double finish_y = 0.0;
+	double movement_current_x = 0.0;
+	double movement_current_y = 0.0;
+	double movement_finish_x = 0.0;
+	double movement_finish_y = 0.0;
 	double movement_start_x = 0.0;
 	double movement_start_y = 0.0;
 	int movement_time_end = 0;
