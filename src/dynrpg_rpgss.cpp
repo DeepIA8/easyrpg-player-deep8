@@ -16,7 +16,11 @@
  */
 
 // Headers
+#ifdef _MSC_VER
 #define _USE_MATH_DEFINES
+#endif
+
+#include <array>
 #include <cmath>
 #include <map>
 
@@ -48,6 +52,7 @@ namespace {
 	// c - relative change to initial value
 	// d - duration
 	double linear_easing(double t, double b, double c, double d) {
+		printf("easy %f\n", c*t/d +b);
 		return c*t/d + b;
 	}
 
@@ -190,14 +195,14 @@ public:
 			if (old_map_x != Game_Map::GetDisplayX()) {
 				double mx = (old_map_x - Game_Map::GetDisplayX()) / (double)TILE_SIZE;
 
-				finish_x += mx;
-				current_x += mx;
+				movement_finish_x += mx;
+				movement_current_x += mx;
 			}
 			if (old_map_y != Game_Map::GetDisplayY()) {
 				double my = (old_map_y - Game_Map::GetDisplayY()) / (double)TILE_SIZE;
 
-				finish_y += my;
-				current_y += my;
+				movement_finish_y += my;
+				movement_current_y += my;
 			}
 
 			old_map_x = Game_Map::GetDisplayX();
@@ -208,13 +213,10 @@ public:
 			easing = "linear";
 		}
 
-		auto interpolate_easing = easing_funcs[easing];
-
 		if (movement_time_current < movement_time_end) {
+			movement_current_x += easing_precalc[0][movement_time_current];
+			movement_current_y += easing_precalc[1][movement_time_current];
 			++movement_time_current;
-			movement_current_x = interpolate_easing(movement_time_current, movement_start_x, movement_finish_x - movement_start_x, movement_time_end);
-			movement_current_y = interpolate_easing(movement_time_current, movement_start_y, movement_finish_y - movement_start_y, movement_time_end);
-			printf("%f %f\n", movement_current_x, movement_current_y);
 		}
 
 		if (rotation_time_left > 0) {
@@ -281,6 +283,8 @@ public:
 		movement_start_y = movement_current_y;
 		movement_time_current = 0;
 		movement_time_end = frames(ms);
+
+		PrecalculateEasing();
 	}
 
 	void SetMovementEffect(int x, int y, int ms, const std::string& easing_) {
@@ -309,6 +313,8 @@ public:
 		movement_start_y = movement_current_y;
 		movement_time_current = 0;
 		movement_time_end = frames(ms);
+
+		PrecalculateEasing();
 	}
 
 	void SetRelativeRotationEffect(double angle, int ms) {
@@ -361,9 +367,8 @@ public:
 			}
 			old_map_x = movement_current_x * TILE_SIZE;
 			old_map_y = movement_current_y * TILE_SIZE;
+		} else {
 
-			movement_current_x = 0.0;
-			movement_current_y = 0.0;
 		}
 	}
 
@@ -510,6 +515,8 @@ public:
 		sprite->tone_time_left = (int)o["tone_time_left"].get<double>();
 		sprite->easing = o["easing"].get<std::string>();
 
+		sprite->PrecalculateEasing();
+
 		return sprite;
 	}
 
@@ -545,6 +552,30 @@ private:
 		sprite->SetBitmap(Bitmap::Create(file));
 
 		return true;
+	}
+
+	void PrecalculateEasing() {
+		easing_precalc[0].clear();
+		easing_precalc[1].clear();
+
+		easing_precalc[0].resize((size_t)movement_time_end);
+		easing_precalc[1].resize((size_t)movement_time_end);
+
+		double prev_x = movement_start_x;
+		double prev_y = movement_start_y;
+
+		auto interpolate_easing = easing_funcs[easing];
+
+		for (size_t i = 1; i < (size_t)movement_time_end; ++i) {
+			double e_x = interpolate_easing(i, movement_start_x, movement_finish_x - movement_start_x, movement_time_end);
+			double e_y = interpolate_easing(i, movement_start_y, movement_finish_y - movement_start_y, movement_time_end);
+
+			easing_precalc[0][i] = e_x - prev_x;
+			easing_precalc[1][i] = e_y - prev_y;
+
+			prev_x = e_x;
+			prev_y = e_y;
+		}
 	}
 
 	std::unique_ptr<Sprite> sprite;
@@ -595,6 +626,7 @@ private:
 	int tone_time_left = 0;
 
 	std::string easing = "linear";
+	std::array<std::vector<double>, 2> easing_precalc;
 
 	std::string file;
 };
