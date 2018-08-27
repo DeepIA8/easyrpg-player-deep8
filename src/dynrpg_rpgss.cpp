@@ -367,6 +367,12 @@ public:
 			}
 			old_map_x = movement_current_x * TILE_SIZE;
 			old_map_y = movement_current_y * TILE_SIZE;
+
+			double mx = (old_map_x - Game_Map::GetDisplayX()) / (double)TILE_SIZE;
+			movement_current_x += mx;
+
+			double my = (old_map_y - Game_Map::GetDisplayY()) / (double)TILE_SIZE;
+			movement_current_y += my;
 		} else {
 
 		}

@@ -27,6 +27,7 @@
 #include "game_vehicle.h"
 #include "bitmap.h"
 #include "player.h"
+#include "dynrpg.h"
 
 // Constructor
 Spriteset_Map::Spriteset_Map() {
@@ -111,6 +112,8 @@ void Spriteset_Map::Update() {
 	timer2->Update();
 
 	weather->SetTone(new_tone);
+
+	DynRpg::Update();
 }
 
 // Finds the sprite for a specific character
