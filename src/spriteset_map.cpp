@@ -30,6 +30,7 @@
 #include "bitmap.h"
 #include "player.h"
 #include "drawable_list.h"
+#include "dynrpg.h"
 
 // Constructor
 Spriteset_Map::Spriteset_Map() {
