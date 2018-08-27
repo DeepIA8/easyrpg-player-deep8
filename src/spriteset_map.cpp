@@ -29,6 +29,7 @@
 #include "bitmap.h"
 #include "player.h"
 #include "drawable_list.h"
+#include "dynrpg.h"
 
 // Constructor
 Spriteset_Map::Spriteset_Map() {
@@ -109,6 +110,8 @@ void Spriteset_Map::Update() {
 
 	timer1->Update();
 	timer2->Update();
+
+	DynRpg::Update();
 }
 
 // Finds the sprite for a specific character
