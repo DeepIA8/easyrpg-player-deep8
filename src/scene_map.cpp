@@ -145,7 +145,6 @@ void Scene_Map::Update() {
 	Main_Data::game_screen->Update();
 	spriteset->Update();
 	message_window->Update();
-	DynRpg::Update();
 
 	StartTeleportPlayer();
 
