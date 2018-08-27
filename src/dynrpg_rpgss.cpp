@@ -190,24 +190,6 @@ public:
 			return;
 		}
 
-		if (fixed_to == FixedTo_Map) {
-			if (old_map_x != Game_Map::GetDisplayX()) {
-				double mx = (old_map_x - Game_Map::GetDisplayX()) / (double)TILE_SIZE;
-
-				movement_finish_x += mx;
-				movement_current_x += mx;
-			}
-			if (old_map_y != Game_Map::GetDisplayY()) {
-				double my = (old_map_y - Game_Map::GetDisplayY()) / (double)TILE_SIZE;
-
-				movement_finish_y += my;
-				movement_current_y += my;
-			}
-
-			old_map_x = Game_Map::GetDisplayX();
-			old_map_y = Game_Map::GetDisplayY();
-		}
-
 		if (easing.empty()) {
 			easing = "linear";
 		}
@@ -216,6 +198,14 @@ public:
 			movement_current_x += easing_precalc[0][movement_time_current];
 			movement_current_y += easing_precalc[1][movement_time_current];
 			++movement_time_current;
+		}
+
+		double x = movement_current_x;
+		double y = movement_current_y;
+
+		if (fixed_to == FixedTo_Map) {
+			x -= (double)(Game_Map::GetDisplayX() / TILE_SIZE);
+			y -= (double)(Game_Map::GetDisplayY() / TILE_SIZE);
 		}
 
 		if (rotation_time_left > 0) {
@@ -251,8 +241,8 @@ public:
 			current_angle += (rotate_cw ? 1 : -1) * rotate_forever_degree;
 		}
 
-		sprite->SetX(movement_current_x);
-		sprite->SetY(movement_current_y);
+		sprite->SetX(x);
+		sprite->SetY(y);
 		sprite->SetZ(z);
 		sprite->SetOx((int)(sprite->GetWidth() / 2));
 		sprite->SetOy((int)(sprite->GetHeight() / 2));
@@ -302,15 +292,9 @@ public:
 		movement_finish_x = (double)x;
 		movement_finish_y = (double)y;
 
-		if (fixed_to == FixedTo_Map) {
-			double mx = Game_Map::GetDisplayX() / (double)TILE_SIZE;
-			movement_finish_x -= mx;
-			double my =  Game_Map::GetDisplayY() / (double)TILE_SIZE;
-			movement_finish_y -= my;
-		}
-
 		movement_start_x = movement_current_x;
 		movement_start_y = movement_current_y;
+
 		movement_time_current = 0;
 		movement_time_end = frames(ms);
 
@@ -357,24 +341,10 @@ public:
 	}
 
 	void SetFixedTo(FixedTo to) {
-		fixed_to = to;
-
 		if (fixed_to == FixedTo_Mouse) {
 			Output::Warning("Sprite: Fixed to mouse not supported");
-		} else if (fixed_to == FixedTo_Map) {
-			if (!sprite) {
-				return;
-			}
-			old_map_x = movement_current_x * TILE_SIZE;
-			old_map_y = movement_current_y * TILE_SIZE;
-
-			double mx = (old_map_x - Game_Map::GetDisplayX()) / (double)TILE_SIZE;
-			movement_current_x += mx;
-
-			double my = (old_map_y - Game_Map::GetDisplayY()) / (double)TILE_SIZE;
-			movement_current_y += my;
 		} else {
-
+			fixed_to = to;
 		}
 	}
 
@@ -464,8 +434,6 @@ public:
 		o["current_opacity"] = picojson::value(current_opacity);
 		o["finish_opacity"] = picojson::value(finish_opacity);
 		o["opacity_time_left"] = picojson::value((double)opacity_time_left);
-		o["old_map_x"] = picojson::value((double)old_map_x);
-		o["old_map_y"] = picojson::value((double)old_map_y);
 		o["filename"] = picojson::value(file);
 		o["current_red"] = picojson::value(current_red);
 		o["current_green"] = picojson::value(current_green);
@@ -511,8 +479,6 @@ public:
 		sprite->current_opacity = o["current_opacity"].get<double>();
 		sprite->finish_opacity = o["finish_opacity"].get<double>();
 		sprite->opacity_time_left = (int)o["opacity_time_left"].get<double>();
-		sprite->old_map_x = (int)o["old_map_x"].get<double>();
-		sprite->old_map_y = (int)o["old_map_y"].get<double>();
 
 		sprite->current_red = o["current_red"].get<double>();
 		sprite->current_green = o["current_green"].get<double>();
@@ -541,9 +507,6 @@ private:
 		z = default_priority;
 		current_zoom_x = 100.0;
 		current_zoom_y = 100.0;
-
-		old_map_x = Game_Map::GetDisplayX();
-		old_map_y = Game_Map::GetDisplayY();
 
 		easing = "linear";
 	}
@@ -621,9 +584,6 @@ private:
 	double current_opacity = 255.0;
 	double finish_opacity = 0.0;
 	int opacity_time_left = 0;
-
-	int old_map_x;
-	int old_map_y;
 
 	double current_red = 128.0;
 	double current_green = 128.0;
