@@ -52,7 +52,6 @@ namespace {
 	// c - relative change to initial value
 	// d - duration
 	double linear_easing(double t, double b, double c, double d) {
-		printf("easy %f\n", c*t/d +b);
 		return c*t/d + b;
 	}
 
@@ -87,7 +86,7 @@ namespace {
 	}
 
 	double cubic_in_out_easing(double t, double b, double c, double d) {
-		t /= (d / 2);
+		t = t / (d / 2);
 		if (t < 1) {
 			return c / 2 * t * t * t + b;
 		} else {
@@ -195,7 +194,7 @@ public:
 			easing = "linear";
 		}
 
-		if (movement_time_current < movement_time_end) {
+		if (movement_time_end > 0 && movement_time_current <= movement_time_end) {
 			movement_current_x += easing_precalc[0][movement_time_current];
 			movement_current_y += easing_precalc[1][movement_time_current];
 			++movement_time_current;
@@ -527,8 +526,8 @@ private:
 		easing_precalc[0].clear();
 		easing_precalc[1].clear();
 
-		easing_precalc[0].resize((size_t)movement_time_end);
-		easing_precalc[1].resize((size_t)movement_time_end);
+		easing_precalc[0].resize((size_t)movement_time_end + 1);
+		easing_precalc[1].resize((size_t)movement_time_end + 1);
 
 		double prev_x = movement_start_x;
 		double prev_y = movement_start_y;
@@ -545,6 +544,9 @@ private:
 			prev_x = e_x;
 			prev_y = e_y;
 		}
+
+		easing_precalc[0][movement_time_end] = movement_finish_x - prev_x;
+		easing_precalc[1][movement_time_end] = movement_finish_y - prev_y;
 	}
 
 	std::unique_ptr<Sprite> sprite;
