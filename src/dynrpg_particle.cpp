@@ -338,9 +338,9 @@ void ParticleEffect::free_rgb() {
 
 void ParticleEffect::alloc_rgb() {
 	if (!r) {
-		r = (uint8_t*)malloc(sizeof(uint8_t) * fade);
-		g = (uint8_t*)malloc(sizeof(uint8_t) * fade);
-		b = (uint8_t*)malloc(sizeof(uint8_t) * fade);
+		r = (uint8_t*)malloc(sizeof(uint8_t) * fade + 1 * fade);
+		g = (uint8_t*)malloc(sizeof(uint8_t) * fade + 1 * fade);
+		b = (uint8_t*)malloc(sizeof(uint8_t) * fade + 1 * fade);
 	}
 }
 
@@ -374,7 +374,7 @@ private:
 	uint8_t simulBeg;
 	uint8_t simulRun;
 	uint8_t simulCnt;
-	uint8_t simulMax;
+	uint16_t simulMax;
 
 	// SOA Style
 	float* x;
@@ -799,7 +799,7 @@ public:
 private:
 
 	uint8_t simulCnt;
-	uint8_t simulMax;
+	uint16_t simulMax;
 
 	// SOA Style
 	float* x;
