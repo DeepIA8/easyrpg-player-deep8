@@ -29,11 +29,30 @@ namespace {
 	/** Gets a random number uniformly distributed in [0, U32_MAX] */
 	uint32_t GetRandomU32() { return rng(); }
 }
+#if defined(__APPLE__) && defined(__MACH__)
+#include "reader_util.h"
+
+#   include <unicode/ucsdet.h>
+#   include <unicode/ucnv.h>
+#   include <unicode/unistr.h>
+#   include <unicode/normalizer2.h>
+#endif
 
 std::string Utils::LowerCase(const std::string& str) {
+#if defined(__APPLE__) && defined(__MACH__)
+	UnicodeString& uni = icu::UnicodeString(str.c_str()).toLower();
+	UErrorCode err = U_ZERO_ERROR;
+	const Normalizer2* norm = icu::Normalizer2::getNFKCInstance(err);
+	UnicodeString f = norm->normalize(uni, err);
+	std::string res;
+	f.toUTF8String(res);
+	return res;
+//	return ReaderUtil::Normalize(str);
+#else
 	std::string result = str;
 	std::transform(result.begin(), result.end(), result.begin(), tolower);
 	return result;
+#endif
 }
 
 std::string Utils::UpperCase(const std::string& str) {
