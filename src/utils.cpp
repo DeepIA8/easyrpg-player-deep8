@@ -40,14 +40,26 @@ namespace {
 
 std::string Utils::LowerCase(const std::string& str) {
 #if defined(__APPLE__) && defined(__MACH__)
-	UnicodeString& uni = icu::UnicodeString(str.c_str()).toLower();
+	icu::UnicodeString uni = icu::UnicodeString(str.c_str(), "utf-8").toLower();
 	UErrorCode err = U_ZERO_ERROR;
-	const Normalizer2* norm = icu::Normalizer2::getNFKCInstance(err);
-	UnicodeString f = norm->normalize(uni, err);
 	std::string res;
-	f.toUTF8String(res);
+	const icu::Normalizer2* norm = icu::Normalizer2::getNFKCInstance(err);
+	if (U_FAILURE(err)) {
+		static bool err_reported = false;
+		if (!err_reported) {
+			fprintf(stderr, "Normalizer2::getNFKCInstance failed (%s). \"nrm\" is probably missing in the ICU data file. Unicode normalization will not work!\n", u_errorName(err));
+			err_reported = true;
+		}
+		uni.toUTF8String(res);
+		return res;
+	}
+	icu::UnicodeString f = norm->normalize(uni, err);
+	if (U_FAILURE(err)) {
+		uni.toUTF8String(res);
+	} else {
+		f.toUTF8String(res);
+	}
 	return res;
-//	return ReaderUtil::Normalize(str);
 #else
 	std::string result = str;
 	std::transform(result.begin(), result.end(), result.begin(), tolower);
