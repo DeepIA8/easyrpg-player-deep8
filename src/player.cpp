@@ -271,7 +271,7 @@ void Player::Update(bool update_scene) {
 	if (Input::IsTriggered(Input::SHOW_LOG)) {
 		Output::ToggleLog();
 	}
-	if (Input::IsTriggered(Input::RESET)) {
+	if (debug_flag && Input::IsTriggered(Input::RESET)) {
 		reset_flag = true;
 	}
 	if (Input::IsTriggered(Input::TOGGLE_ZOOM)) {
