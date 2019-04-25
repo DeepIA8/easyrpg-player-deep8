@@ -780,6 +780,7 @@ void Player::CreateGameObjects() {
 
 	Main_Data::filefinder_rtp.reset(new FileFinder_RTP(no_rtp_flag, no_rtp_warning_flag));
 
+	patch |= PatchDynRpg;
 	if ((patch & PatchOverride) == 0) {
 		if (!FileFinder::FindDefault("dynloader.dll").empty()) {
 			patch |= PatchDynRpg;
