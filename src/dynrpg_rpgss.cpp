@@ -145,6 +145,112 @@ namespace {
 	}
 }
 
+class Effect {
+public:
+	Effect() {
+
+	}
+
+	Effect(double start) :
+		start(0.0), current(start), finish(0.0), finish_frame(0), easing("linear")
+	{
+		// static effect
+	}
+
+	Effect(double start, double finish, int frames, const std::string& easing) :
+		start(start), current(start), finish(finish), finish_frame(frames), easing(easing)
+	{
+		if (easing.empty()) {
+			this->easing = "linear";
+			return;
+		}
+
+		if (easing_funcs.find(easing) == easing_funcs.end()) {
+			Output::Warning("RPGSS: Unsupported easing mode %s", easing.c_str());
+			this->easing = "linear";
+		}
+	}
+
+	double NextFrame() {
+		if (finish_frame == 0) {
+			return current;
+		}
+
+		bool ok = current_frame <= finish_frame;
+
+		if (!ok) {
+			return current;
+		}
+
+		if (easing_precalc.empty()) {
+			PrecalculateEasing();
+		}
+
+		current += easing_precalc[current_frame];
+
+		++current_frame;
+		return current;
+	}
+
+	bool IsFinished() {
+		return !(finish_frame > 0 && current_frame <= finish_frame);
+	}
+
+	picojson::object ToJson() {
+		picojson::object o;
+		o["start"] = picojson::value(start);
+		o["finish"] = picojson::value(finish);
+		o["current"] = picojson::value(current);
+		o["current_frame"] = picojson::value((double)current_frame);
+		o["finish_frame"] = picojson::value((double)finish_frame);
+		o["easing"] = picojson::value(easing);
+
+		return o;
+	}
+
+	static Effect FromJson(picojson::object& o) {
+		Effect e;
+		e.start = o["start"].get<double>();
+		e.finish = o["finish"].get<double>();
+		e.current = o["current"].get<double>();
+		e.current_frame = (int)(o["current_frame"].get<double>());
+		e.finish_frame = (int)(o["finish_frame"].get<double>());
+		e.easing = o["easing"].get<std::string>();
+
+		return e;
+	}
+
+	double start = 0.0;
+	double finish = 0.0;
+	double current = 0.0;
+	int current_frame = 0;
+	int finish_frame = 0;
+	std::vector<double> easing_precalc;
+	std::string easing = "linear";
+
+private:
+	void PrecalculateEasing() {
+		easing_precalc.clear();
+		easing_precalc.resize((size_t)finish_frame + 1);
+
+		double prev = start;
+
+		if (easing.empty()) {
+			easing = "linear";
+		}
+
+		auto interpolate_easing = easing_funcs[easing];
+
+		for (size_t i = 1; i < (size_t)finish_frame; ++i) {
+			double e = interpolate_easing(i, start, finish - start, finish_frame);
+			easing_precalc[i] = e - prev;
+			prev = e;
+		}
+
+		easing_precalc[finish_frame] = finish - prev;
+	}
+};
+
 class RpgssSprite {
 public:
 	enum BlendMode {
@@ -189,18 +295,8 @@ public:
 			return;
 		}
 
-		if (easing.empty()) {
-			easing = "linear";
-		}
-
-		if (movement_time_end > 0 && movement_time_current <= movement_time_end) {
-			movement_current_x += easing_precalc[0][movement_time_current];
-			movement_current_y += easing_precalc[1][movement_time_current];
-			++movement_time_current;
-		}
-
-		double x = movement_current_x;
-		double y = movement_current_y;
+		double x = movement_x.NextFrame();
+		double y = movement_y.NextFrame();
 
 		if (fixed_to == FixedTo_Map) {
 			x -= (double)(Game_Map::GetDisplayX() / TILE_SIZE);
@@ -211,16 +307,6 @@ public:
 			// TODO: Rotate ccw
 			current_angle = interpolate(rotation_time_left, current_angle, finish_angle);
 			--rotation_time_left;
-		}
-
-		if (zoom_x_time_left > 0) {
-			current_zoom_x = interpolate(zoom_x_time_left, current_zoom_x, finish_zoom_x);
-			--zoom_x_time_left;
-		}
-
-		if (zoom_y_time_left > 0) {
-			current_zoom_y = interpolate(zoom_y_time_left, current_zoom_y, finish_zoom_y);
-			--zoom_y_time_left;
 		}
 
 		if (opacity_time_left > 0) {
@@ -246,58 +332,27 @@ public:
 		sprite->SetOx((int)(sprite->GetWidth() / 2));
 		sprite->SetOy((int)(sprite->GetHeight() / 2));
 		sprite->SetAngle(current_angle);
-		sprite->SetZoomX(current_zoom_x / 100.0);
-		sprite->SetZoomY(current_zoom_y / 100.0);
+		sprite->SetZoomX(zoom_x.NextFrame() / 100.0);
+		sprite->SetZoomY(zoom_y.NextFrame() / 100.0);
 		sprite->SetOpacity((int)(current_opacity));
 		sprite->SetTone(Tone(current_red, current_green, current_blue, current_sat));
 		sprite->SetVisible(visible);
 	}
 
-	void SetRelativeMovementEffect(int ox, int oy, int ms, const std::string& easing_) {
-		easing = easing_;
-
-		if (easing.empty()) {
-			easing = "linear";
-		}
-
-		if (easing_funcs.find(easing) == easing_funcs.end()) {
-			Output::Warning("RPGSS: Unsupported easing mode %s", easing.c_str());
-			easing = "linear";
-		}
-
-		movement_finish_x = (double)ox + movement_current_x;
-		movement_finish_y = (double)oy + movement_current_y;
-
-		movement_start_x = movement_current_x;
-		movement_start_y = movement_current_y;
-		movement_time_current = 0;
-		movement_time_end = frames(ms);
-
-		PrecalculateEasing();
+	void SetRelativeMovementXEffect(int ox, int ms, const std::string& easing) {
+		movement_x = Effect(movement_x.current,(double)ox + movement_x.current, frames(ms), easing);
 	}
 
-	void SetMovementEffect(int x, int y, int ms, const std::string& easing_) {
-		easing = easing_;
+	void SetRelativeMovementYEffect(int oy, int ms, const std::string& easing) {
+		movement_y = Effect(movement_y.current,(double)oy + movement_y.current, frames(ms), easing);
+	}
 
-		if (easing.empty()) {
-			easing = "linear";
-		}
+	void SetMovementXEffect(int x, int ms, const std::string& easing) {
+		movement_x = Effect(movement_x.current,(double)x, frames(ms), easing);
+	}
 
-		if (easing_funcs.find(easing) == easing_funcs.end()) {
-			Output::Warning("RPGSS: Unsupported easing mode %s", easing.c_str());
-			easing = "linear";
-		}
-
-		movement_finish_x = (double)x;
-		movement_finish_y = (double)y;
-
-		movement_start_x = movement_current_x;
-		movement_start_y = movement_current_y;
-
-		movement_time_current = 0;
-		movement_time_end = frames(ms);
-
-		PrecalculateEasing();
+	void SetMovementYEffect(int y, int ms, const std::string& easing) {
+		movement_y = Effect(movement_y.current,(double)y, frames(ms), easing);
 	}
 
 	void SetRelativeRotationEffect(double angle, int ms) {
@@ -316,14 +371,12 @@ public:
 		rotate_cw = forward;
 	}
 
-	void SetZoomXEffect(int new_zoom, int ms) {
-		finish_zoom_x = new_zoom;
-		zoom_x_time_left = frames(ms);
+	void SetZoomXEffect(int new_zoom, int ms, const std::string& easing_) {
+		zoom_x = Effect(zoom_x.current,(double)new_zoom, frames(ms), easing_);
 	}
 
-	void SetZoomYEffect(int new_zoom, int ms) {
-		finish_zoom_y = new_zoom;
-		zoom_y_time_left = frames(ms);
+	void SetZoomYEffect(int new_zoom, int ms, const std::string& easing_) {
+		zoom_y = Effect(zoom_y.current,(double)new_zoom, frames(ms), easing_);
 	}
 
 	void SetOpacityEffect(int new_opacity, int ms) {
@@ -348,15 +401,11 @@ public:
 	}
 
 	void SetX(int x) {
-		movement_current_x = x;
-		movement_time_current = 0;
-		movement_time_end = 0;
+		movement_x = Effect((double)x);
 	}
 
 	void SetY(int y) {
-		movement_current_y = y;
-		movement_time_current = 0;
-		movement_time_end = 0;
+		movement_y = Effect((double)y);
 	}
 
 	int GetZ() {
@@ -386,13 +435,11 @@ public:
 	}
 
 	void SetZoomX(double zoom) {
-		current_zoom_x = zoom;
-		zoom_x_time_left = 0;
+		zoom_x = Effect((double)zoom);
 	}
 
 	void SetZoomY(double zoom) {
-		current_zoom_y = zoom;
-		zoom_y_time_left = 0;
+		zoom_y = Effect((double)zoom);
 	}
 
 	void SetVisible(bool v) {
@@ -406,22 +453,16 @@ public:
 
 	picojson::object Save() {
 		picojson::object o;
+
+		o["version"] = picojson::value(1.0);
+
+		o["movement_x"] = picojson::value(movement_x.ToJson());
+		o["movement_y"] = picojson::value(movement_y.ToJson());
+		o["zoom_x"] = picojson::value(zoom_x.ToJson());
+		o["zoom_y"] = picojson::value(zoom_y.ToJson());
+
 		o["blendmode"] = picojson::value((double)blendmode);
 		o["fixed_to"] = picojson::value((double)fixed_to);
-		o["current_x"] = picojson::value(movement_current_x);
-		o["current_y"] = picojson::value(movement_current_y);
-		o["finish_x"] = picojson::value(movement_finish_x);
-		o["finish_y"] = picojson::value(movement_finish_y);
-		o["movement_start_x"] = picojson::value(movement_start_x);
-		o["movement_start_y"] = picojson::value(movement_start_y);
-		o["movement_time_end"] = picojson::value((double)movement_time_end);
-		o["movement_time_current"] = picojson::value((double)movement_time_current);
-		o["current_zoom_x"] = picojson::value(current_zoom_x);
-		o["finish_zoom_x"] = picojson::value(finish_zoom_x);
-		o["zoom_x_time_left"] = picojson::value((double)zoom_x_time_left);
-		o["current_zoom_y"] = picojson::value(current_zoom_y);
-		o["finish_zoom_y"] = picojson::value(finish_zoom_y);
-		o["zoom_y_time_left"] = picojson::value((double)zoom_y_time_left);
 		o["current_angle"] = picojson::value(current_angle);
 		o["finish_angle"] = picojson::value(finish_angle);
 		o["rotation_time_left"] = picojson::value((double)rotation_time_left);
@@ -443,7 +484,6 @@ public:
 		o["finish_blue"] = picojson::value(finish_blue);
 		o["finish_sat"] = picojson::value(finish_sat);
 		o["tone_time_left"] = picojson::value((double)tone_time_left);
-		o["easing"] = picojson::value(easing);
 
 		return o;
 	}
@@ -451,22 +491,20 @@ public:
 	static std::unique_ptr<RpgssSprite> Load(picojson::object& o) {
 		auto sprite = std::unique_ptr<RpgssSprite>(new RpgssSprite(o["filename"].get<std::string>()));
 
+		int version = 1;
+		if (o["version"].is<double>()) {
+			version = (int)o["version"].get<double>();
+		}
+
+		if (version > 1) {
+			sprite->movement_x = Effect::FromJson(o["movement_x"].get<picojson::object>());
+			sprite->movement_y = Effect::FromJson(o["movement_y"].get<picojson::object>());
+			sprite->zoom_x = Effect::FromJson(o["zoom_x"].get<picojson::object>());
+			sprite->zoom_y = Effect::FromJson(o["zoom_y"].get<picojson::object>());
+		}
+
 		sprite->blendmode = (int)(o["blendmode"].get<double>());
 		sprite->fixed_to = (int)(o["fixed_to"].get<double>());
-		sprite->movement_current_x = o["current_x"].get<double>();
-		sprite->movement_current_y = o["current_y"].get<double>();
-		sprite->movement_finish_x = o["finish_x"].get<double>();
-		sprite->movement_finish_y = o["finish_y"].get<double>();
-		sprite->movement_start_x = o["movement_start_x"].get<double>();
-		sprite->movement_start_y = o["movement_start_y"].get<double>();
-		sprite->movement_time_end = (int)o["movement_time_end"].get<double>();
-		sprite->movement_time_current = (int)o["movement_time_current"].get<double>();
-		sprite->current_zoom_x = o["current_zoom_x"].get<double>();
-		sprite->finish_zoom_x = o["finish_zoom_x"].get<double>();
-		sprite->zoom_x_time_left = (int)o["zoom_x_time_left"].get<double>();
-		sprite->current_zoom_y = o["current_zoom_y"].get<double>();
-		sprite->finish_zoom_y = o["finish_zoom_y"].get<double>();
-		sprite->zoom_y_time_left = (int)o["zoom_y_time_left"].get<double>();
 		sprite->current_angle = o["current_angle"].get<double>();
 		sprite->finish_angle = o["finish_angle"].get<double>();
 		sprite->rotation_time_left = (int)o["rotation_time_left"].get<double>();
@@ -478,7 +516,6 @@ public:
 		sprite->current_opacity = o["current_opacity"].get<double>();
 		sprite->finish_opacity = o["finish_opacity"].get<double>();
 		sprite->opacity_time_left = (int)o["opacity_time_left"].get<double>();
-
 		sprite->current_red = o["current_red"].get<double>();
 		sprite->current_green = o["current_green"].get<double>();
 		sprite->current_blue = o["current_blue"].get<double>();
@@ -488,9 +525,6 @@ public:
 		sprite->finish_blue = o["finish_blue"].get<double>();
 		sprite->finish_sat = o["finish_sat"].get<double>();
 		sprite->tone_time_left = (int)o["tone_time_left"].get<double>();
-		sprite->easing = o["easing"].get<std::string>();
-
-		sprite->PrecalculateEasing();
 
 		return sprite;
 	}
@@ -501,13 +535,11 @@ private:
 			return;
 		}
 
-		movement_current_x = 160.0;
-		movement_current_y = 120.0;
+		movement_x.current = 160.0;
+		movement_y.current = 120.0;
 		z = default_priority;
-		current_zoom_x = 100.0;
-		current_zoom_y = 100.0;
-
-		easing = "linear";
+		zoom_x.current = 100.0;
+		zoom_y.current = 100.0;
 	}
 
 	bool SetSpriteImage(const std::string& filename) {
@@ -527,52 +559,16 @@ private:
 		return true;
 	}
 
-	void PrecalculateEasing() {
-		easing_precalc[0].clear();
-		easing_precalc[1].clear();
-
-		easing_precalc[0].resize((size_t)movement_time_end + 1);
-		easing_precalc[1].resize((size_t)movement_time_end + 1);
-
-		double prev_x = movement_start_x;
-		double prev_y = movement_start_y;
-
-		auto interpolate_easing = easing_funcs[easing];
-
-		for (size_t i = 1; i < (size_t)movement_time_end; ++i) {
-			double e_x = interpolate_easing(i, movement_start_x, movement_finish_x - movement_start_x, movement_time_end);
-			double e_y = interpolate_easing(i, movement_start_y, movement_finish_y - movement_start_y, movement_time_end);
-
-			easing_precalc[0][i] = e_x - prev_x;
-			easing_precalc[1][i] = e_y - prev_y;
-
-			prev_x = e_x;
-			prev_y = e_y;
-		}
-
-		easing_precalc[0][movement_time_end] = movement_finish_x - prev_x;
-		easing_precalc[1][movement_time_end] = movement_finish_y - prev_y;
-	}
-
 	std::unique_ptr<Sprite> sprite;
 
 	int blendmode = BlendMode_Mix;
 	int fixed_to = FixedTo_Screen;
 
-	double movement_current_x = 0.0;
-	double movement_current_y = 0.0;
-	double movement_finish_x = 0.0;
-	double movement_finish_y = 0.0;
-	double movement_start_x = 0.0;
-	double movement_start_y = 0.0;
-	int movement_time_end = 0;
-	int movement_time_current = 0;
-	double current_zoom_x = 100.0;
-	double finish_zoom_x = 0.0;
-	int zoom_x_time_left = 0;
-	double current_zoom_y = 100.0;
-	double finish_zoom_y = 0.0;
-	int zoom_y_time_left = 0;
+	Effect movement_x;
+	Effect movement_y;
+	Effect zoom_x;
+	Effect zoom_y;
+
 	double current_angle = 0.0;
 	double finish_angle = 0.0;
 	int rotation_time_left = 0;
@@ -597,9 +593,6 @@ private:
 	double finish_blue = 100;
 	double finish_sat = 100;
 	int tone_time_left = 0;
-
-	std::string easing = "linear";
-	std::array<std::vector<double>, 2> easing_precalc;
 
 	std::string file;
 };
@@ -751,10 +744,66 @@ static bool MoveSpriteBy(const dyn_arg_list& args) {
 	}
 
 	if (args.size() >= 5) {
-		DYNRPG_GET_STR_ARG(4, easing)
-		graphics[id]->SetRelativeMovementEffect(ox, oy, ms, easing);
+		DYNRPG_GET_STR_ARG(4, easing_x)
+		graphics[id]->SetRelativeMovementXEffect(ox, ms, easing_x);
+
+		if (args.size() >= 6) {
+			DYNRPG_GET_STR_ARG(5, easing_y)
+			graphics[id]->SetRelativeMovementYEffect(oy, ms, easing_y);
+		} else {
+			graphics[id]->SetRelativeMovementYEffect(oy, ms, easing_x);
+		}
 	} else {
-		graphics[id]->SetRelativeMovementEffect(ox, oy, ms, "linear");
+		graphics[id]->SetRelativeMovementXEffect(ox, ms, "linear");
+		graphics[id]->SetRelativeMovementYEffect(oy, ms, "linear");
+	}
+
+	return true;
+}
+
+static bool MoveXSpriteBy(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("move_x_sprite_by")
+
+	DYNRPG_CHECK_ARG_LENGTH(3)
+
+	DYNRPG_GET_STR_ARG(0, id)
+	DYNRPG_GET_INT_ARG(1, ox)
+	DYNRPG_GET_INT_ARG(2, ms)
+
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
+
+	if (args.size() >= 4) {
+		DYNRPG_GET_STR_ARG(3, easing)
+		graphics[id]->SetRelativeMovementXEffect(ox, ms, easing);
+	} else {
+		graphics[id]->SetRelativeMovementXEffect(ox, ms, "linear");
+	}
+
+	return true;
+}
+
+static bool MoveYSpriteBy(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("move_y_sprite_by")
+
+	DYNRPG_CHECK_ARG_LENGTH(3)
+
+	DYNRPG_GET_STR_ARG(0, id)
+	DYNRPG_GET_INT_ARG(1, oy)
+	DYNRPG_GET_INT_ARG(2, ms)
+
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
+
+	if (args.size() >= 4) {
+		DYNRPG_GET_STR_ARG(3, easing)
+		graphics[id]->SetRelativeMovementYEffect(oy, ms, easing);
+	} else {
+		graphics[id]->SetRelativeMovementYEffect(oy, ms, "linear");
 	}
 
 	return true;
@@ -776,10 +825,66 @@ static bool MoveSpriteTo(const dyn_arg_list& args) {
 	}
 
 	if (args.size() >= 5) {
-		DYNRPG_GET_STR_ARG(4, easing)
-		graphics[id]->SetMovementEffect(ox, oy, ms, easing);
+		DYNRPG_GET_STR_ARG(4, easing_x)
+		graphics[id]->SetMovementXEffect(ox, ms, easing_x);
+
+		if (args.size() >= 6) {
+			DYNRPG_GET_STR_ARG(5, easing_y)
+			graphics[id]->SetMovementYEffect(oy, ms, easing_y);
+		} else {
+			graphics[id]->SetMovementYEffect(oy, ms, easing_x);
+		}
 	} else {
-		graphics[id]->SetMovementEffect(ox, oy, ms, "linear");
+		graphics[id]->SetMovementXEffect(ox, ms, "linear");
+		graphics[id]->SetMovementYEffect(oy, ms, "linear");
+	}
+
+	return true;
+}
+
+static bool MoveXSpriteTo(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("move_x_sprite_to")
+
+	DYNRPG_CHECK_ARG_LENGTH(3)
+
+	DYNRPG_GET_STR_ARG(0, id)
+	DYNRPG_GET_INT_ARG(1, ox)
+	DYNRPG_GET_INT_ARG(2, ms)
+
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
+
+	if (args.size() >= 4) {
+		DYNRPG_GET_STR_ARG(3, easing)
+		graphics[id]->SetMovementXEffect(ox, ms, easing);
+	} else {
+		graphics[id]->SetMovementXEffect(ox, ms, "linear");
+	}
+
+	return true;
+}
+
+static bool MoveYSpriteTo(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("move_y_sprite_to")
+
+	DYNRPG_CHECK_ARG_LENGTH(3)
+
+	DYNRPG_GET_STR_ARG(0, id)
+	DYNRPG_GET_INT_ARG(1, oy)
+	DYNRPG_GET_INT_ARG(2, ms)
+
+	if (graphics.find(id) == graphics.end()) {
+		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
+		return true;
+	}
+
+	if (args.size() >= 4) {
+		DYNRPG_GET_STR_ARG(3, easing)
+		graphics[id]->SetMovementYEffect(oy, ms, easing);
+	} else {
+		graphics[id]->SetMovementYEffect(oy, ms, "linear");
 	}
 
 	return true;
@@ -799,8 +904,21 @@ static bool ScaleSpriteTo(const dyn_arg_list& args) {
 		return true;
 	}
 
-	graphics[id]->SetZoomXEffect(scale, ms);
-	graphics[id]->SetZoomYEffect(scale, ms);
+	if (args.size() >= 4) {
+		DYNRPG_GET_STR_ARG(3, easing_x)
+		graphics[id]->SetZoomXEffect(scale, ms, easing_x);
+
+		if (args.size() >= 5) {
+			DYNRPG_GET_STR_ARG(4, easing_y)
+			graphics[id]->SetZoomYEffect(scale, ms, easing_y);
+		} else {
+			graphics[id]->SetZoomYEffect(scale, ms, easing_x);
+		}
+
+	} else {
+		graphics[id]->SetZoomXEffect(scale, ms, "linear");
+		graphics[id]->SetZoomYEffect(scale, ms, "linear");
+	}
 
 	return true;
 }
@@ -819,7 +937,12 @@ static bool ScaleXSpriteTo(const dyn_arg_list& args) {
 		return true;
 	}
 
-	graphics[id]->SetZoomXEffect(scale, ms);
+	if (args.size() >= 4) {
+		DYNRPG_GET_STR_ARG(3, easing)
+		graphics[id]->SetZoomXEffect(scale, ms, easing);
+	} else {
+		graphics[id]->SetZoomXEffect(scale, ms, "linear");
+	}
 
 	return true;
 }
@@ -839,7 +962,12 @@ static bool ScaleYSpriteTo(const dyn_arg_list& args) {
 		return true;
 	}
 
-	graphics[id]->SetZoomYEffect(scale, ms);
+	if (args.size() >= 4) {
+		DYNRPG_GET_STR_ARG(3, easing)
+		graphics[id]->SetZoomYEffect(scale, ms, easing);
+	} else {
+		graphics[id]->SetZoomYEffect(scale, ms, "linear");
+	}
 
 	return true;
 }
@@ -1096,7 +1224,11 @@ void DynRpg::Rpgss::RegisterFunctions() {
 	DynRpg::RegisterFunction("remove_sprite", RemoveSprite);
 	DynRpg::RegisterFunction("set_sprite_image", SetSpriteImage);
 	DynRpg::RegisterFunction("bind_sprite_to", BindSpriteTo);
+	DynRpg::RegisterFunction("move_x_sprite_by", MoveXSpriteBy);
+	DynRpg::RegisterFunction("move_y_sprite_by", MoveYSpriteBy);
 	DynRpg::RegisterFunction("move_sprite_by", MoveSpriteBy);
+	DynRpg::RegisterFunction("move_x_sprite_to", MoveXSpriteTo);
+	DynRpg::RegisterFunction("move_y_sprite_to", MoveYSpriteTo);
 	DynRpg::RegisterFunction("move_sprite_to", MoveSpriteTo);
 	DynRpg::RegisterFunction("scale_sprite_to", ScaleSpriteTo);
 	DynRpg::RegisterFunction("scale_x_sprite_to", ScaleXSpriteTo);
