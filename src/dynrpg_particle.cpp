@@ -67,6 +67,7 @@ public:
 	virtual void setRandRad(int new_rnd_rad);
 	virtual void setRandSpd(float new_rnd_spd);
 	virtual void setRandPos(int new_rnd_x, int new_rnd_y);
+	void setInterval(uint32_t new_interval);
 	virtual void setTexture(std::string filename);
 	virtual void unloadTexture();
 	virtual void useScreenRelative(bool enabled);
@@ -122,6 +123,8 @@ protected:
 	uint16_t amount;
 	uint32_t color0;
 	uint32_t color1;
+	uint32_t interval = 1;
+	uint32_t cur_interval = 1;
 
 	void free_rgb();
 	void alloc_rgb();
@@ -312,6 +315,14 @@ void ParticleEffect::setColor0(uint8_t r, uint8_t g, uint8_t b) {
 void ParticleEffect::setColor1(uint8_t r, uint8_t g, uint8_t b) {
 	color1 = (r << 16) | (g << 8) | b;
 	update_color();
+}
+
+void ParticleEffect::setInterval(uint32_t new_interval) {
+	if (new_interval < 1) {
+		return;
+	}
+	cur_interval = new_interval;
+	interval = new_interval;
 }
 
 void ParticleEffect::update_color() {
@@ -607,12 +618,16 @@ void Stream::Draw(Bitmap& dst) {
 	int block_size = amount * fade;
 	int i = 0;
 
+	--cur_interval;
+
 	/// Starting
 	for (; i < simulBeg; i++) {
 		uint8_t idx = pfx_ref[i];
 		if (itr[idx] < fade) {
 			uint8_t z = fade - itr[idx]++ - 1;
-			(this->*init)(z * amount + idx * block_size, (z + 1) * amount + idx * block_size, idx);
+			if (cur_interval == 0) {
+				(this->*init)(z * amount + idx * block_size, (z + 1) * amount + idx * block_size, idx);
+			}
 			(this->*draw_block)(dst, idx * block_size, itr[idx], z, 0, cam_x, cam_y);
 		} else start_to_stream(i--);
 	}
@@ -621,7 +636,9 @@ void Stream::Draw(Bitmap& dst) {
 		uint8_t idx = pfx_ref[i];
 		uint8_t z = fade - itr[idx] - 1;
 		itr[idx] = (itr[idx] + 1) % fade;
-		(this->*init)(z * amount + idx * block_size, (z + 1) * amount + idx * block_size, idx);
+		if (cur_interval == 0) {
+			(this->*init)(z * amount + idx * block_size, (z + 1) * amount + idx * block_size, idx);
+		}
 		(this->*draw_block)(dst, idx * block_size, fade, z, 0, cam_x, cam_y);
 	}
 	/// Stopping
@@ -631,6 +648,10 @@ void Stream::Draw(Bitmap& dst) {
 		(this->*draw_block)(dst, idx * block_size, end_cnt[idx]--, z, fade - end_cnt[idx], cam_x, cam_y);
 		if (end_cnt[idx] <= 0)
 			stream_to_end(i);
+	}
+
+	if (cur_interval == 0) {
+		cur_interval = interval;
 	}
 }
 
@@ -1428,6 +1449,23 @@ static bool set_angle(dyn_arg_list args) {
 	return true;
 }
 
+static bool set_interval(dyn_arg_list args) {
+	auto func = "pfx_set_interval";
+	bool okay;
+	std::string tag;
+	int interval;
+	std::tie(tag, interval) = DynRpg::ParseArgs<std::string, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+
+	ptag_t::iterator itr = pfx_list.find(tag);
+	if (itr != pfx_list.end()) {
+		itr->second->setInterval(interval);
+	}
+	return true;
+}
+
 static bool set_secondary_angle(dyn_arg_list args) {
 	auto func = "pfx_set_secondary_angle";
 	bool okay;
@@ -1610,6 +1648,7 @@ void DynRpg::Particle::RegisterFunctions() {
 	DynRpg::RegisterFunction("pfx_set_gravity_direction", set_gravity_direction);
 	DynRpg::RegisterFunction("pfx_set_velocity", set_velocity);
 	DynRpg::RegisterFunction("pfx_set_angle", set_angle);
+	DynRpg::RegisterFunction("pfx_set_interval", set_interval);
 	DynRpg::RegisterFunction("pfx_set_secondary_angle", set_secondary_angle);
 	DynRpg::RegisterFunction("pfx_set_generating_function", set_generating_function);
 	DynRpg::RegisterFunction("pfx_use_screen_relative", use_screen_relative);
