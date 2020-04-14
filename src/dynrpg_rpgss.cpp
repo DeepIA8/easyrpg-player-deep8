@@ -33,6 +33,8 @@
 #include "graphics.h"
 #include "sprite.h"
 #include "picojson.h"
+#include "main_data.h"
+#include "game_variables.h"
 
 class RpgssSprite;
 
@@ -400,15 +402,23 @@ public:
 		}
 	}
 
+	int GetX() const {
+		return movement_x.current;
+	}
+
 	void SetX(int x) {
 		movement_x = Effect((double)x);
+	}
+
+	int GetY() const {
+		return movement_y.current;
 	}
 
 	void SetY(int y) {
 		movement_y = Effect((double)y);
 	}
 
-	int GetZ() {
+	int GetZ() const{
 		return z;
 	}
 
@@ -1161,6 +1171,35 @@ static bool SetLayer(const dyn_arg_list& args) {
 	return true;
 }
 
+static bool GetSpritePosition(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("get_sprite_position")
+
+	DYNRPG_CHECK_ARG_LENGTH(3)
+
+	DYNRPG_GET_STR_ARG(0, id)
+	DYNRPG_GET_INT_ARG(1, var_x)
+	DYNRPG_GET_INT_ARG(2, var_y)
+
+	Main_Data::game_variables->Set(var_x, graphics[id]->GetX());
+
+	return true;
+}
+
+static bool SetSpritePosition(const dyn_arg_list& args) {
+	DYNRPG_FUNCTION("set_sprite_position")
+
+	DYNRPG_CHECK_ARG_LENGTH(3)
+
+	DYNRPG_GET_STR_ARG(0, id)
+	DYNRPG_GET_INT_ARG(1, x)
+	DYNRPG_GET_INT_ARG(2, y)
+
+	graphics[id]->SetX(x);
+	graphics[id]->SetY(y);
+
+	return true;
+}
+
 std::string DynRpg::Rpgss::GetIdentifier() {
 	return "RpgssDeep8";
 }
@@ -1190,6 +1229,8 @@ void DynRpg::Rpgss::RegisterFunctions() {
 	DynRpg::RegisterFunction("set_sprite_layer", SetLayer);
 	DynRpg::RegisterFunction("set_sprite_color", SetSpriteColor);
 	DynRpg::RegisterFunction("shift_sprite_color_to", ShiftSpriteColorTo);
+	DynRpg::RegisterFunction("get_sprite_position", GetSpritePosition);
+	DynRpg::RegisterFunction("set_sprite_position", SetSpritePosition);
 
 	easing_funcs["linear"] = linear_easing;
 	easing_funcs["quadratic in"] = quadratic_in_easing;
