@@ -120,8 +120,11 @@ std::string PendingMessage::ApplyTextInsertingCommands(std::string input, uint32
 		const auto ch = *iter;
 		++iter;
 
-		output.append(cmd_fn(ch, &iter, end, escape_char));
-		start_copy = iter;
+		auto res = cmd_fn(ch, &iter, end, escape_char);
+		if (!res.empty()) {
+			output.append(res);
+			start_copy = iter;
+		}
 	}
 
 	if (start_copy == input.data()) {

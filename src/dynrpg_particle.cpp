@@ -38,8 +38,7 @@
 // Lowest Z-order is drawn above. wtf
 // Follows the logic of RPGSS to prevent confusion
 constexpr int layer_mask = (5 << 16);
-constexpr int layer_offset = 0xFFFF / 2;
-constexpr int default_priority = Priority_Timer + layer_mask + layer_offset;
+constexpr int default_priority = Priority_Timer + layer_mask;
 
 class ParticleEffect;
 
@@ -128,8 +127,6 @@ protected:
 	void alloc_rgb();
 	void update_color();
 	static float sin_lut[32];
-
-	int z = default_priority;
 };
 
 void linear_fade(ParticleEffect* effect, uint32_t color0, uint32_t color1, int fade, int delay) {
@@ -199,7 +196,7 @@ void linear_fade_texture(uint32_t color0, uint32_t color1, int fade, int delay, 
 
 float ParticleEffect::sin_lut[32];
 
-ParticleEffect::ParticleEffect() : Drawable(0), r0(50), rand_r(0), rand_x(0), rand_y(0), spd(0.5), rand_spd(0.5),
+ParticleEffect::ParticleEffect() : Drawable(default_priority), r0(50), rand_r(0), rand_x(0), rand_y(0), spd(0.5), rand_spd(0.5),
 s0(1), s1(1), ds(0), gx(0), gy(0), ax0(0), ay0(0), afc(0), beta(6.2832),
 alpha(0), theta(0), fade(30), delay(0), amount(50) {
 	r = nullptr;
@@ -1523,7 +1520,7 @@ static bool SetZ(dyn_arg_list args) {
 		return true;
 	}
 
-	int layer_z = itr->second->GetZ() & 0xFFFF0000 + layer_offset;
+	int layer_z = itr->second->GetZ() & 0xFFFF0000;
 
 	itr->second->SetZ(layer_z - z);
 

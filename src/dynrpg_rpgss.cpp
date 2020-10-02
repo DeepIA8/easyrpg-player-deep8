@@ -41,8 +41,7 @@ class RpgssSprite;
 
 // Lowest Z-order is drawn above. wtf
 constexpr int layer_mask = (5 << 16);
-constexpr int layer_offset = 0xFFFF / 2;
-constexpr int default_priority = Priority_Timer + layer_mask + layer_offset;
+constexpr int default_priority = Priority_Timer + layer_mask;
 
 namespace {
 	std::map<std::string, std::unique_ptr<RpgssSprite>> graphics;
@@ -332,9 +331,10 @@ public:
 
 		sprite->SetX(x);
 		sprite->SetY(y);
+		sprite->SetZ(z);
 		sprite->SetOx((int)(sprite->GetWidth() / 2));
 		sprite->SetOy((int)(sprite->GetHeight() / 2));
-		sprite->SetAngle(current_angle * (2 * M_PI) / 256);
+		sprite->SetAngle(current_angle * (2 * M_PI) / 360);
 		sprite->SetZoomX(zoom_x.NextFrame() / 100.0);
 		sprite->SetZoomY(zoom_y.NextFrame() / 100.0);
 		sprite->SetOpacity((int)(current_opacity));
@@ -1181,7 +1181,7 @@ static bool SetZ(dyn_arg_list args) {
 		return true;
 	}
 
-	int layer_z = graphics[id]->GetZ() & 0xFFFF0000 + layer_offset;
+	int layer_z = graphics[id]->GetZ() & 0xFFFF0000;
 
 	graphics[id]->SetZ(layer_z - z);
 
@@ -1238,7 +1238,7 @@ static bool SetLayer(dyn_arg_list args) {
 			z = 0;
 	}
 
-	int old_z = graphics[id]->GetZ() & 0x00FFFFFF;
+	int old_z = graphics[id]->GetZ() & 0x0000FFFF;
 
 	graphics[id]->SetZ(z + layer_mask + old_z);
 
@@ -1259,6 +1259,7 @@ static bool GetSpritePosition(dyn_arg_list args) {
 	}
 
 	Main_Data::game_variables->Set(var_x, graphics[id]->GetX());
+	Main_Data::game_variables->Set(var_y, graphics[id]->GetY());
 
 	return true;
 }
