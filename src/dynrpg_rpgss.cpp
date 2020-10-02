@@ -23,6 +23,7 @@
 #include <array>
 #include <cmath>
 #include <map>
+#include <memory>
 
 #include "dynrpg_rpgss.h"
 #include "baseui.h"
@@ -333,7 +334,7 @@ public:
 		sprite->SetY(y);
 		sprite->SetOx((int)(sprite->GetWidth() / 2));
 		sprite->SetOy((int)(sprite->GetHeight() / 2));
-		sprite->SetAngle(current_angle);
+		sprite->SetAngle(current_angle * (2 * M_PI) / 256);
 		sprite->SetZoomX(zoom_x.NextFrame() / 100.0);
 		sprite->SetZoomY(zoom_y.NextFrame() / 100.0);
 		sprite->SetOpacity((int)(current_opacity));
@@ -495,7 +496,7 @@ public:
 	}
 
 	static std::unique_ptr<RpgssSprite> Load(picojson::object& o) {
-		auto sprite = std::unique_ptr<RpgssSprite>(new RpgssSprite(o["filename"].get<std::string>()));
+		auto sprite = std::make_unique<RpgssSprite>(o["filename"].get<std::string>());
 
 		int version = 1;
 		if (o["version"].is<double>()) {
@@ -602,15 +603,17 @@ private:
 	std::string file;
 };
 
-static bool AddSprite(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("add_sprite")
+static bool AddSprite(dyn_arg_list args) {
+	auto func = "add_sprite";
+	bool okay;
+	std::string id, filename;
 
-	DYNRPG_CHECK_ARG_LENGTH(2);
+	std::tie(id, filename) = DynRpg::ParseArgs<std::string, std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_STR_ARG(1, filename)
-
-	graphics[id].reset(new RpgssSprite(filename));
+	graphics[id] = std::make_unique<RpgssSprite>(filename);
 
 	Sprite* const sprite = graphics[id]->GetSprite();
 
@@ -624,33 +627,51 @@ static bool AddSprite(const dyn_arg_list& args) {
 		default:
 		case 9:
 		{
-			DYNRPG_GET_FLOAT_ARG(8, angle)
+			auto angle = DynRpg::ParseSingleArg<float>(func, args.subspan(8), &okay);
+			if (!okay) {
+				return true;
+			}
 			graphic->SetAngle(angle);
 		}
 		case 8:
 		{
-			DYNRPG_GET_FLOAT_ARG(7, scale)
+			auto scale = DynRpg::ParseSingleArg<float>(func, args.subspan(7), &okay);
+			if (!okay) {
+				return true;
+			}
 			graphic->SetZoomX(scale);
 			graphic->SetZoomY(scale);
 		}
 		case 7:
 		{
-			DYNRPG_GET_INT_ARG(6, y)
+			auto y = DynRpg::ParseSingleArg<int>(func, args.subspan(6), &okay);
+			if (!okay) {
+				return true;
+			}
 			graphic->SetY(y);
 		}
 		case 6:
 		{
-			DYNRPG_GET_INT_ARG(5, x)
+			auto x = DynRpg::ParseSingleArg<int>(func, args.subspan(5), &okay);
+			if (!okay) {
+				return true;
+			}
 			graphic->SetX(x);
 		}
 		case 5:
 		{
-			DYNRPG_GET_INT_ARG(4, z)
+			auto z = DynRpg::ParseSingleArg<int>(func, args.subspan(4), &okay);
+			if (!okay) {
+				return true;
+			}
 			graphic->SetZ(default_priority - z);
 		}
 		case 4:
 		{
-			DYNRPG_GET_INT_ARG(3, visible)
+			auto visible = DynRpg::ParseSingleArg<int>(func, args.subspan(3), &okay);
+			if (!okay) {
+				return true;
+			}
 			graphic->SetVisible(visible > 0);
 		}
 		case 3:
@@ -661,12 +682,14 @@ static bool AddSprite(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool RemoveSprite(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("remove_sprite")
+static bool RemoveSprite(dyn_arg_list args) {
+	auto func = "remove_sprite";
+	bool okay;
 
-	DYNRPG_CHECK_ARG_LENGTH(1)
-
-	DYNRPG_GET_STR_ARG(0, id)
+	auto id = DynRpg::ParseSingleArg<std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	auto it = graphics.find(id);
 	if (it != graphics.end()) {
@@ -676,11 +699,12 @@ static bool RemoveSprite(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool SetSpriteBlendMode(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("set_sprite_blend_mode")
+static bool SetSpriteBlendMode(dyn_arg_list args) {
+	auto func = "set_sprite_blend_mode";
+	bool okay;
 
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
+#if 0
+	// TODO unsupported
 	DYNRPG_GET_STR_ARG(0, id)
 	DYNRPG_GET_STR_ARG(1, blendmode)
 
@@ -689,34 +713,39 @@ static bool SetSpriteBlendMode(const dyn_arg_list& args) {
 	// ERRORCHK
 
 	//graphics[id]->SetSprite(filename);
-
+#endif
 	return true;
 }
 
-static bool SetSpriteImage(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("set_sprite_image")
+static bool SetSpriteImage(dyn_arg_list args) {
+	auto func = "set_sprite_image";
+	bool okay;
+	std::string id, filename;
 
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_STR_ARG(1, filename)
-
-	// ERRORCHK
+	std::tie(id, filename) = DynRpg::ParseArgs<std::string, std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	graphics[id]->SetSprite(filename);
 
 	return true;
 }
 
-static bool BindSpriteTo(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("bind_sprite_to")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_STR_ARG(1, coordsys)
-
-	// ERRORCHK
+static bool BindSpriteTo(dyn_arg_list args) {
+	auto func = "bind_sprite_to";
+	bool okay;
+	std::string id, coordsys;
+	std::tie(id, coordsys) = DynRpg::ParseArgs<std::string, std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	graphics[id]->SetFixedTo(coordsys == "mouse" ? RpgssSprite::FixedTo_Mouse :
 		coordsys == "map" ? RpgssSprite::FixedTo_Map : RpgssSprite::FixedTo_Screen);
@@ -724,24 +753,30 @@ static bool BindSpriteTo(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool MoveSpriteBy(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("move_sprite_by")
 
-	DYNRPG_CHECK_ARG_LENGTH(4)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, ox)
-	DYNRPG_GET_INT_ARG(2, oy)
-	DYNRPG_GET_INT_ARG(3, ms)
-
-	// ERRORCHK
+static bool MoveSpriteBy(dyn_arg_list args) {
+	auto func = "move_sprite_by";
+	bool okay;
+	std::string id;
+	int ox, oy, ms;
+	std::tie(id, ox, oy, ms) = DynRpg::ParseArgs<std::string, int, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	if (args.size() >= 5) {
-		DYNRPG_GET_STR_ARG(4, easing_x)
+		auto easing_x = DynRpg::ParseSingleArg<std::string>(func, args.subspan(4), &okay);
+		if (!okay)
+			return true;
 		graphics[id]->SetRelativeMovementXEffect(ox, ms, easing_x);
 
 		if (args.size() >= 6) {
-			DYNRPG_GET_STR_ARG(5, easing_y)
+			auto easing_y = DynRpg::ParseSingleArg<std::string>(func, args.subspan(5), &okay);
+			if (!okay)
+				return true;
 			graphics[id]->SetRelativeMovementYEffect(oy, ms, easing_y);
 		} else {
 			graphics[id]->SetRelativeMovementYEffect(oy, ms, easing_x);
@@ -754,22 +789,23 @@ static bool MoveSpriteBy(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool MoveXSpriteBy(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("move_x_sprite_by")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, ox)
-	DYNRPG_GET_INT_ARG(2, ms)
-
+static bool MoveXSpriteBy(dyn_arg_list args) {
+	auto func = "move_x_sprite_by";
+	bool okay;
+	std::string id;
+	int ox, ms;
+	std::tie(id, ox, ms) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 	if (graphics.find(id) == graphics.end()) {
-		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
 		return true;
 	}
 
 	if (args.size() >= 4) {
-		DYNRPG_GET_STR_ARG(3, easing)
+		auto easing = DynRpg::ParseSingleArg<std::string>(func, args.subspan(3), &okay);
+		if (!okay)
+			return true;
 		graphics[id]->SetRelativeMovementXEffect(ox, ms, easing);
 	} else {
 		graphics[id]->SetRelativeMovementXEffect(ox, ms, "linear");
@@ -778,22 +814,23 @@ static bool MoveXSpriteBy(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool MoveYSpriteBy(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("move_y_sprite_by")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, oy)
-	DYNRPG_GET_INT_ARG(2, ms)
-
+static bool MoveYSpriteBy(dyn_arg_list args) {
+	auto func = "move_y_sprite_by";
+	bool okay;
+	std::string id;
+	int oy, ms;
+	std::tie(id, oy, ms) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 	if (graphics.find(id) == graphics.end()) {
-		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
 		return true;
 	}
 
 	if (args.size() >= 4) {
-		DYNRPG_GET_STR_ARG(3, easing)
+		auto easing = DynRpg::ParseSingleArg<std::string>(func, args.subspan(3), &okay);
+		if (!okay)
+			return true;
 		graphics[id]->SetRelativeMovementYEffect(oy, ms, easing);
 	} else {
 		graphics[id]->SetRelativeMovementYEffect(oy, ms, "linear");
@@ -802,24 +839,29 @@ static bool MoveYSpriteBy(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool MoveSpriteTo(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("move_sprite_to")
-
-	DYNRPG_CHECK_ARG_LENGTH(4)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, ox)
-	DYNRPG_GET_INT_ARG(2, oy)
-	DYNRPG_GET_INT_ARG(3, ms)
-
-	// ERRORCHK
+static bool MoveSpriteTo(dyn_arg_list args) {
+	auto func = "move_sprite_to";
+	bool okay;
+	std::string id;
+	int ox, oy, ms;
+	std::tie(id, ox, oy, ms) = DynRpg::ParseArgs<std::string, int, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	if (args.size() >= 5) {
-		DYNRPG_GET_STR_ARG(4, easing_x)
+		auto easing_x = DynRpg::ParseSingleArg<std::string>(func, args.subspan(4), &okay);
+		if (!okay)
+			return true;
 		graphics[id]->SetMovementXEffect(ox, ms, easing_x);
 
 		if (args.size() >= 6) {
-			DYNRPG_GET_STR_ARG(5, easing_y)
+			auto easing_y = DynRpg::ParseSingleArg<std::string>(func, args.subspan(5), &okay);
+			if (!okay)
+				return true;
 			graphics[id]->SetMovementYEffect(oy, ms, easing_y);
 		} else {
 			graphics[id]->SetMovementYEffect(oy, ms, easing_x);
@@ -832,22 +874,23 @@ static bool MoveSpriteTo(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool MoveXSpriteTo(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("move_x_sprite_to")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, ox)
-	DYNRPG_GET_INT_ARG(2, ms)
-
+static bool MoveXSpriteTo(dyn_arg_list args) {
+	auto func = "move_x_sprite_to";
+	bool okay;
+	std::string id;
+	int ox, ms;
+	std::tie(id, ox, ms) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 	if (graphics.find(id) == graphics.end()) {
-		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
 		return true;
 	}
 
 	if (args.size() >= 4) {
-		DYNRPG_GET_STR_ARG(3, easing)
+		auto easing = DynRpg::ParseSingleArg<std::string>(func, args.subspan(3), &okay);
+		if (!okay)
+			return true;
 		graphics[id]->SetMovementXEffect(ox, ms, easing);
 	} else {
 		graphics[id]->SetMovementXEffect(ox, ms, "linear");
@@ -856,22 +899,23 @@ static bool MoveXSpriteTo(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool MoveYSpriteTo(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("move_y_sprite_to")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, oy)
-	DYNRPG_GET_INT_ARG(2, ms)
-
+static bool MoveYSpriteTo(dyn_arg_list args) {
+	auto func = "move_y_sprite_to";
+	bool okay;
+	std::string id;
+	int oy, ms;
+	std::tie(id, oy, ms) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 	if (graphics.find(id) == graphics.end()) {
-		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
 		return true;
 	}
 
 	if (args.size() >= 4) {
-		DYNRPG_GET_STR_ARG(3, easing)
+		auto easing = DynRpg::ParseSingleArg<std::string>(func, args.subspan(3), &okay);
+		if (!okay)
+			return true;
 		graphics[id]->SetMovementYEffect(oy, ms, easing);
 	} else {
 		graphics[id]->SetMovementYEffect(oy, ms, "linear");
@@ -880,23 +924,29 @@ static bool MoveYSpriteTo(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool ScaleSpriteTo(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("scale_sprite_to")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, scale)
-	DYNRPG_GET_INT_ARG(2, ms)
-
-	// ERRORCHK
+static bool ScaleSpriteTo(dyn_arg_list args) {
+	auto func = "scale_sprite_to";
+	bool okay;
+	std::string id;
+	int scale, ms;
+	std::tie(id, scale, ms) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	if (args.size() >= 4) {
-		DYNRPG_GET_STR_ARG(3, easing_x)
+		auto easing_x = DynRpg::ParseSingleArg<std::string>(func, args.subspan(3), &okay);
+		if (!okay)
+			return true;
 		graphics[id]->SetZoomXEffect(scale, ms, easing_x);
 
 		if (args.size() >= 5) {
-			DYNRPG_GET_STR_ARG(4, easing_y)
+			auto easing_y = DynRpg::ParseSingleArg<std::string>(func, args.subspan(4), &okay);
+			if (!okay)
+				return true;
 			graphics[id]->SetZoomYEffect(scale, ms, easing_y);
 		} else {
 			graphics[id]->SetZoomYEffect(scale, ms, easing_x);
@@ -910,22 +960,23 @@ static bool ScaleSpriteTo(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool ScaleXSpriteTo(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("scale_x_sprite_to")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, scale)
-	DYNRPG_GET_INT_ARG(2, ms)
-
+static bool ScaleXSpriteTo(dyn_arg_list args) {
+	auto func = "scale_x_sprite_to";
+	bool okay;
+	std::string id;
+	int scale, ms;
+	std::tie(id, scale, ms) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 	if (graphics.find(id) == graphics.end()) {
-		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
 		return true;
 	}
 
 	if (args.size() >= 4) {
-		DYNRPG_GET_STR_ARG(3, easing)
+		auto easing = DynRpg::ParseSingleArg<std::string>(func, args.subspan(3), &okay);
+		if (!okay)
+			return true;
 		graphics[id]->SetZoomXEffect(scale, ms, easing);
 	} else {
 		graphics[id]->SetZoomXEffect(scale, ms, "linear");
@@ -935,22 +986,23 @@ static bool ScaleXSpriteTo(const dyn_arg_list& args) {
 }
 
 
-static bool ScaleYSpriteTo(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("scale_y_sprite_to")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, scale)
-	DYNRPG_GET_INT_ARG(2, ms)
-
+static bool ScaleYSpriteTo(dyn_arg_list args) {
+	auto func = "scale_y_sprite_to";
+	bool okay;
+	std::string id;
+	int scale, ms;
+	std::tie(id, scale, ms) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 	if (graphics.find(id) == graphics.end()) {
-		Output::Debug("RPGSS: Sprite not found %s", id.c_str());
 		return true;
 	}
 
 	if (args.size() >= 4) {
-		DYNRPG_GET_STR_ARG(3, easing)
+		auto easing = DynRpg::ParseSingleArg<std::string>(func, args.subspan(3), &okay);
+		if (!okay)
+			return true;
 		graphics[id]->SetZoomYEffect(scale, ms, easing);
 	} else {
 		graphics[id]->SetZoomYEffect(scale, ms, "linear");
@@ -959,118 +1011,133 @@ static bool ScaleYSpriteTo(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool RotateSpriteBy(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("rotate_sprite_by")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, angle)
-	DYNRPG_GET_INT_ARG(2, ms)
-
-	// ERRORCHK
+static bool RotateSpriteBy(dyn_arg_list args) {
+	auto func = "rotate_sprite_by";
+	bool okay;
+	std::string id;
+	int angle, ms;
+	std::tie(id, angle, ms) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	graphics[id]->SetRelativeRotationEffect(-angle, ms);
 
 	return true;
 }
 
-static bool RotateSpriteTo(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("rotate_sprite_to")
-
-	DYNRPG_CHECK_ARG_LENGTH(4)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_STR_ARG(1, direction)
-	DYNRPG_GET_INT_ARG(2, angle)
-	DYNRPG_GET_INT_ARG(3, ms)
-
-	// ERRORCHK
+static bool RotateSpriteTo(dyn_arg_list args) {
+	auto func = "rotate_sprite_to";
+	bool okay;
+	std::string id, direction;
+	int angle, ms;
+	std::tie(id, direction, angle, ms) = DynRpg::ParseArgs<std::string, std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	graphics[id]->SetRotationEffect(direction == "cw", angle, ms);
 
 	return true;
 }
 
-static bool RotateSpriteForever(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("rotate_sprite_forever")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_STR_ARG(1, direction)
-	DYNRPG_GET_INT_ARG(2, ms)
-
-	// ERRORCHK
+static bool RotateSpriteForever(dyn_arg_list args) {
+	auto func = "rotate_sprite_forever";
+	bool okay;
+	std::string id, direction;
+	int ms;
+	std::tie(id, direction, ms) = DynRpg::ParseArgs<std::string, std::string, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	graphics[id]->SetRotationForever(direction == "cw", ms);
 
 	return true;
 }
 
-static bool StopSpriteRotation(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("stop_sprite_rotation")
-
-	DYNRPG_CHECK_ARG_LENGTH(1)
-
-	DYNRPG_GET_STR_ARG(0, id)
-
-	// ERRORCHK
+static bool StopSpriteRotation(dyn_arg_list args) {
+	auto func = "stop_sprite_rotation";
+	bool okay;
+	auto id = DynRpg::ParseSingleArg<std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	graphics[id]->SetRotationEffect(true, 0, 0);
 
 	return true;
 }
 
-static bool SetSpriteOpacity(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("set_sprite_opacity")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, opacity)
-
-	// ERRORCHK
+static bool SetSpriteOpacity(dyn_arg_list args) {
+	auto func = "set_sprite_opacity";
+	bool okay;
+	std::string id;
+	int opacity;
+	std::tie(id, opacity) = DynRpg::ParseArgs<std::string, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	graphics[id]->SetOpacity(opacity);
 
 	return true;
 }
 
-static bool ShiftSpriteOpacityTo(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("shift_sprite_opacity_to")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, opacity)
-	DYNRPG_GET_INT_ARG(2, ms)
-
-	// ERRORCHK
+static bool ShiftSpriteOpacityTo(dyn_arg_list args) {
+	auto func = "shift_sprite_opacity_to";
+	bool okay;
+	std::string id;
+	int opacity, ms;
+	std::tie(id, opacity, ms) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	graphics[id]->SetOpacityEffect(opacity, ms);
 
 	return true;
 }
 
-static bool SetSpriteColor(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("set_sprite_color")
-
-	DYNRPG_CHECK_ARG_LENGTH(4)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, red)
-	DYNRPG_GET_INT_ARG(2, green)
-	DYNRPG_GET_INT_ARG(3, blue)
+static bool SetSpriteColor(dyn_arg_list args) {
+	auto func = "set_sprite_color";
+	bool okay;
+	std::string id;
+	int red, green, blue;
+	std::tie(id, red, green, blue) = DynRpg::ParseArgs<std::string, int, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	int sat = 100;
 
 	if (args.size() > 4) {
-		DYNRPG_GET_INT_ARG(4, s);
-		sat = s;
+		sat = DynRpg::ParseSingleArg<int>(func, args.subspan(3), &okay);
+		if (!okay) {
+			return true;
+		}
 	}
-
-	// ERRORCHK
 
 	graphics[id]->SetTone(Tone((int)(red * 128 / 100),
 		(int)(green * 128 / 100),
@@ -1080,19 +1147,18 @@ static bool SetSpriteColor(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool ShiftSpriteColorTo(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("shift_sprite_color_to")
-
-	DYNRPG_CHECK_ARG_LENGTH(6)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, red)
-	DYNRPG_GET_INT_ARG(2, green)
-	DYNRPG_GET_INT_ARG(3, blue)
-	DYNRPG_GET_INT_ARG(4, sat)
-	DYNRPG_GET_INT_ARG(5, ms)
-
-	// ERRORCHK
+static bool ShiftSpriteColorTo(dyn_arg_list args) {
+	auto func = "shift_sprite_color_to";
+	bool okay;
+	std::string id;
+	int red, green, blue, sat, ms;
+	std::tie(id, red, green, blue, sat, ms) = DynRpg::ParseArgs<std::string, int, int, int, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	graphics[id]->SetToneEffect(Tone((int)(red * 128 / 100),
 		(int)(green * 128 / 100),
@@ -1102,15 +1168,18 @@ static bool ShiftSpriteColorTo(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool SetZ(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("set_sprite_z")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, z)
-
-	// ERRORCHK
+static bool SetZ(dyn_arg_list args) {
+	auto func = "set_sprite_z";
+	bool okay;
+	std::string id;
+	int z;
+	std::tie(id, z) = DynRpg::ParseArgs<std::string, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	int layer_z = graphics[id]->GetZ() & 0xFFFF0000 + layer_offset;
 
@@ -1119,17 +1188,20 @@ static bool SetZ(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool SetLayer(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("set_sprite_layer")
+static bool SetLayer(dyn_arg_list args) {
+	auto func = "set_sprite_layer";
+	bool okay;
+	std::string id;
+	int layer;
+	std::tie(id, layer) = DynRpg::ParseArgs<std::string, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, layer)
-
-	// ERRORCHK
-
-	int z = 0;
+	int z;
 
 	switch (layer) {
 		case 1:
@@ -1162,6 +1234,8 @@ static bool SetLayer(const dyn_arg_list& args) {
 		case 10:
 			z = Priority_Timer;
 			break;
+		default:
+			z = 0;
 	}
 
 	int old_z = graphics[id]->GetZ() & 0x00FFFFFF;
@@ -1171,37 +1245,41 @@ static bool SetLayer(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool GetSpritePosition(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("get_sprite_position")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, var_x)
-	DYNRPG_GET_INT_ARG(2, var_y)
+static bool GetSpritePosition(dyn_arg_list args) {
+	auto func = "get_sprite_position";
+	bool okay;
+	std::string id;
+	int var_x, var_y;
+	std::tie(id, var_x, var_y) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	Main_Data::game_variables->Set(var_x, graphics[id]->GetX());
 
 	return true;
 }
 
-static bool SetSpritePosition(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("set_sprite_position")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, id)
-	DYNRPG_GET_INT_ARG(1, x)
-	DYNRPG_GET_INT_ARG(2, y)
+static bool SetSpritePosition(dyn_arg_list args) {
+	auto func = "set_sprite_position";
+	bool okay;
+	std::string id;
+	int x, y;
+	std::tie(id, x, y) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
+	if (graphics.find(id) == graphics.end()) {
+		return true;
+	}
 
 	graphics[id]->SetX(x);
 	graphics[id]->SetY(y);
 
 	return true;
-}
-
-std::string DynRpg::Rpgss::GetIdentifier() {
-	return "RpgssDeep8";
 }
 
 void DynRpg::Rpgss::RegisterFunctions() {

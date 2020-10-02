@@ -26,7 +26,7 @@
 
 #include "dynrpg_easyrpg.h"
 #include "dynrpg_textplugin.h"
-#include "dynrpg_pec.h"
+#include "dynrpg_particle.h"
 #include "dynrpg_rpgss.h"
 
 #include <cstring>

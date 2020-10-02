@@ -219,7 +219,7 @@ alpha(0), theta(0), fade(30), delay(0), amount(50) {
 
 void ParticleEffect::setTexture(std::string filename) {
 	// When the name ends with .png, remove it
-	if (Utils::EndsWith(filename, ".png")) {
+	if (StringView(filename).ends_with(".png")) {
 		filename = filename.substr(0, filename.length() - 4);
 	}
 	FileRequestAsync* req = AsyncHandler::RequestFile("Picture", filename);
@@ -356,17 +356,17 @@ public:
 	Stream();
 	~Stream();
 	void Draw(Bitmap& dst) override;
-	void clear();
+	void clear() override;
 	void stopAll();
 	void stop(std::string tag);
 	void start(int x, int y, std::string tag);
 
-	void unloadTexture();
-	void setSimul(int newSimul);
-	void setAmount(int newAmount);
-	void setTimeout(int fade, int delay);
-	void setTexture(std::string filename);
-	void setGeneratingFunction(std::string type);
+	void unloadTexture() override;
+	void setSimul(int newSimul) override;
+	void setAmount(int newAmount) override;
+	void setTimeout(int fade, int delay) override;
+	void setTexture(std::string filename) override;
+	void setGeneratingFunction(std::string type) override;
 	void setPosition(std::string tag, int x, int y);
 
 private:
@@ -787,14 +787,14 @@ public:
 	Burst();
 	~Burst();
 	void Draw(Bitmap& dst) override;
-	void clear();
+	void clear() override;
 	void newBurst(int x, int y);
 
-	void unloadTexture();
-	void setSimul(int newSimul);
-	void setAmount(int newAmount);
-	void setTexture(std::string filename);
-	void setGeneratingFunction(std::string type);
+	void unloadTexture() override;
+	void setSimul(int newSimul) override;
+	void setAmount(int newAmount) override;
+	void setTexture(std::string filename) override;
+	void setGeneratingFunction(std::string type) override;
 
 private:
 
@@ -970,7 +970,7 @@ void Burst::draw_texture(Bitmap& dst, int cam_x, int cam_y) {
 
 void Burst::setTexture(std::string filename) {
 	// When the name ends with .png, remove it
-	if (Utils::EndsWith(filename, ".png")) {
+	if (StringView(filename).ends_with(".png")) {
 		filename = filename.substr(0, filename.length() - 4);
 	}
 	FileRequestAsync* req = AsyncHandler::RequestFile("Picture", filename);
@@ -1047,19 +1047,15 @@ void Burst::alloc_mem() {
 	itr = (uint8_t*)malloc(sizeof(uint8_t) * simulMax);
 }
 
-std::string DynRpg::Particle::GetIdentifier() {
-	return "KazeParticles";
-}
+static bool create_effect(dyn_arg_list args) {
+	auto func = "pfx_create_effect";
+	bool okay;
+	std::string tag, type;
+	std::tie(tag, type) = DynRpg::ParseArgs<std::string, std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
-static bool create_effect(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_create_effect")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_STR_ARG(1, typ)
-
-	std::string type = typ;
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr == pfx_list.end()) {
 		std::transform(type.begin(), type.end(), type.begin(), ::tolower);
@@ -1070,12 +1066,13 @@ static bool create_effect(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool destroy_effect(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_destroy_effect")
-
-	DYNRPG_CHECK_ARG_LENGTH(1)
-
-	DYNRPG_GET_STR_ARG(0, tag)
+static bool destroy_effect(dyn_arg_list args) {
+	auto func = "pfx_destroy_effect";
+	bool okay;
+	auto tag = DynRpg::ParseSingleArg<std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1085,9 +1082,7 @@ static bool destroy_effect(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool destroy_all(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("destroy_all")
-
+static bool destroy_all(dyn_arg_list args) {
 	ptag_t::iterator itr = pfx_list.begin();
 	while (itr != pfx_list.end()) {
 		delete itr->second;
@@ -1097,13 +1092,15 @@ static bool destroy_all(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool does_effect_exist(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_does_effect_exist")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, idx)
+static bool does_effect_exist(dyn_arg_list args) {
+	auto func = "pfx_does_effect_exist";
+	bool okay;
+	std::string tag;
+	int idx;
+	std::tie(tag, idx) = DynRpg::ParseArgs<std::string, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1116,14 +1113,15 @@ static bool does_effect_exist(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool burst(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_burst")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, idx)
-	DYNRPG_GET_INT_ARG(2, idx2)
+static bool burst(dyn_arg_list args) {
+	auto func = "pfx_burst";
+	bool okay;
+	std::string tag;
+	int idx, idx2;
+	std::tie(tag, idx, idx2) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1132,15 +1130,15 @@ static bool burst(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool start(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_start")
-
-	DYNRPG_CHECK_ARG_LENGTH(4)
-
-	DYNRPG_GET_STR_ARG(0, tag1)
-	DYNRPG_GET_STR_ARG(1, tag2)
-	DYNRPG_GET_INT_ARG(2, idx)
-	DYNRPG_GET_INT_ARG(3, idx2)
+static bool start(dyn_arg_list args) {
+	auto func = "pfx_start";
+	bool okay;
+	std::string tag1, tag2;
+	int idx, idx2;
+	std::tie(tag1, tag2, idx, idx2) = DynRpg::ParseArgs<std::string, std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag1);
 	if (itr != pfx_list.end()) {
@@ -1149,13 +1147,14 @@ static bool start(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool stop(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_stop")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag1)
-	DYNRPG_GET_STR_ARG(1, tag2)
+static bool stop(dyn_arg_list args) {
+	auto func = "pfx_stop";
+	bool okay;
+	std::string tag1, tag2;
+	std::tie(tag1, tag2) = DynRpg::ParseArgs<std::string, std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag1);
 	if (itr != pfx_list.end()) {
@@ -1164,12 +1163,13 @@ static bool stop(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool stopall(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_stopall")
-
-	DYNRPG_CHECK_ARG_LENGTH(1)
-
-	DYNRPG_GET_STR_ARG(0, tag)
+static bool stopall(dyn_arg_list args) {
+	auto func = "pfx_stopall";
+	bool okay;
+	auto tag = DynRpg::ParseSingleArg<std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1178,12 +1178,15 @@ static bool stopall(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_simul(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_simul")
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, idx)
+static bool set_simul(dyn_arg_list args) {
+	auto func = "pfx_set_simul";
+	bool okay;
+	std::string tag;
+	int idx;
+	std::tie(tag, idx) = DynRpg::ParseArgs<std::string, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1192,13 +1195,15 @@ static bool set_simul(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_amount(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_amount")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, idx)
+static bool set_amount(dyn_arg_list args) {
+	auto func = "pfx_set_amount";
+	bool okay;
+	std::string tag;
+	int idx;
+	std::tie(tag, idx) = DynRpg::ParseArgs<std::string, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1207,14 +1212,15 @@ static bool set_amount(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_timeout(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_timeout")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, val)
-	DYNRPG_GET_INT_ARG(2, val2)
+static bool set_timeout(dyn_arg_list args) {
+	auto func = "pfx_set_timeout";
+	bool okay;
+	std::string tag;
+	int val, val2;
+	std::tie(tag, val, val2) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1223,15 +1229,15 @@ static bool set_timeout(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_initial_color(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_initial_color")
-
-	DYNRPG_CHECK_ARG_LENGTH(4)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, val)
-	DYNRPG_GET_INT_ARG(2, val2)
-	DYNRPG_GET_INT_ARG(3, val3)
+static bool set_initial_color(dyn_arg_list args) {
+	auto func = "pfx_set_initial_color";
+	bool okay;
+	std::string tag;
+	int val, val2, val3;
+	std::tie(tag, val, val2, val3) = DynRpg::ParseArgs<std::string, int, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1240,15 +1246,15 @@ static bool set_initial_color(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_final_color(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_final_color")
-
-	DYNRPG_CHECK_ARG_LENGTH(4)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, val)
-	DYNRPG_GET_INT_ARG(2, val2)
-	DYNRPG_GET_INT_ARG(3, val3)
+static bool set_final_color(dyn_arg_list args) {
+	auto func = "pfx_set_final_color";
+	bool okay;
+	std::string tag;
+	int val, val2, val3;
+	std::tie(tag, val, val2, val3) = DynRpg::ParseArgs<std::string, int, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1257,14 +1263,15 @@ static bool set_final_color(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_growth(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_growth")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, val)
-	DYNRPG_GET_INT_ARG(2, val2)
+static bool set_growth(dyn_arg_list args) {
+	auto func = "pfx_set_growth";
+	bool okay;
+	std::string tag;
+	float val, val2;
+	std::tie(tag, val, val2) = DynRpg::ParseArgs<std::string, float, float>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1273,15 +1280,15 @@ static bool set_growth(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_position(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_position")
-
-	DYNRPG_CHECK_ARG_LENGTH(4)
-
-	DYNRPG_GET_STR_ARG(0, tag1)
-	DYNRPG_GET_STR_ARG(1, tag2)
-	DYNRPG_GET_INT_ARG(2, val)
-	DYNRPG_GET_INT_ARG(3, val2)
+static bool set_position(dyn_arg_list args) {
+	auto func = "pfx_set_position";
+	bool okay;
+	std::string tag1, tag2;
+	int val, val2;
+	std::tie(tag1, tag2, val, val2) = DynRpg::ParseArgs<std::string, std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag1);
 	if (itr != pfx_list.end()) {
@@ -1290,14 +1297,15 @@ static bool set_position(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_random_position(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_random_position")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, val)
-	DYNRPG_GET_INT_ARG(2, val2)
+static bool set_random_position(dyn_arg_list args) {
+	auto func = "pfx_set_random_position";
+	bool okay;
+	std::string tag;
+	int val, val2;
+	std::tie(tag, val, val2) = DynRpg::ParseArgs<std::string, int, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1306,13 +1314,15 @@ static bool set_random_position(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_random_radius(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_random_radius")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, radius)
+static bool set_random_radius(dyn_arg_list args) {
+	auto func = "pfx_set_random_radius";
+	bool okay;
+	std::string tag;
+	int radius;
+	std::tie(tag, radius) = DynRpg::ParseArgs<std::string, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1321,13 +1331,15 @@ static bool set_random_radius(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_radius(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_radius")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, radius)
+static bool set_radius(dyn_arg_list args) {
+	auto func = "pfx_set_radius";
+	bool okay;
+	std::string tag;
+	int radius;
+	std::tie(tag, radius) = DynRpg::ParseArgs<std::string, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1336,13 +1348,14 @@ static bool set_radius(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_texture(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_texture")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_STR_ARG(1, txt)
+static bool set_texture(dyn_arg_list args) {
+	auto func = "pfx_set_texture";
+	bool okay;
+	std::string tag, txt;
+	std::tie(tag, txt) = DynRpg::ParseArgs<std::string, std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1351,15 +1364,15 @@ static bool set_texture(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_acceleration_point(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_acceleration_point")
-
-	DYNRPG_CHECK_ARG_LENGTH(4)
-	DYNRPG_GET_STR_ARG(0, tag)
-
-	DYNRPG_GET_INT_ARG(1, val)
-	DYNRPG_GET_INT_ARG(2, val2)
-	DYNRPG_GET_INT_ARG(3, val3)
+static bool set_acceleration_point(dyn_arg_list args) {
+	auto func = "pfx_set_acceleration_point";
+	bool okay;
+	std::string tag;
+	float val, val2, val3;
+	std::tie(tag, val, val2, val3) = DynRpg::ParseArgs<std::string, float, float, float>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1368,14 +1381,15 @@ static bool set_acceleration_point(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_gravity_direction(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_gravity_direction")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-	DYNRPG_GET_STR_ARG(0, tag)
-
-	DYNRPG_GET_INT_ARG(1, val)
-	DYNRPG_GET_INT_ARG(2, val2)
+static bool set_gravity_direction(dyn_arg_list args) {
+	auto func = "pfx_set_gravity_direction";
+	bool okay;
+	std::string tag;
+	float val, val2;
+	std::tie(tag, val, val2) = DynRpg::ParseArgs<std::string, float, float>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1384,14 +1398,15 @@ static bool set_gravity_direction(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_velocity(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_velocity")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-	DYNRPG_GET_STR_ARG(0, tag)
-
-	DYNRPG_GET_INT_ARG(1, val)
-	DYNRPG_GET_INT_ARG(2, val2)
+static bool set_velocity(dyn_arg_list args) {
+	auto func = "pfx_set_velocity";
+	bool okay;
+	std::string tag;
+	float val, val2;
+	std::tie(tag, val, val2) = DynRpg::ParseArgs<std::string, float, float>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1401,14 +1416,15 @@ static bool set_velocity(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_angle(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_angle")
-
-	DYNRPG_CHECK_ARG_LENGTH(3)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, val)
-	DYNRPG_GET_INT_ARG(2, val2)
+static bool set_angle(dyn_arg_list args) {
+	auto func = "pfx_set_angle";
+	bool okay;
+	std::string tag;
+	float val, val2;
+	std::tie(tag, val, val2) = DynRpg::ParseArgs<std::string, float, float>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1417,12 +1433,15 @@ static bool set_angle(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_secondary_angle(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_secondary_angle")
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, val)
+static bool set_secondary_angle(dyn_arg_list args) {
+	auto func = "pfx_set_secondary_angle";
+	bool okay;
+	std::string tag;
+	float val;
+	std::tie(tag, val) = DynRpg::ParseArgs<std::string, float>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1431,28 +1450,30 @@ static bool set_secondary_angle(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool set_generating_function(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_generating_function")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_STR_ARG(1, func)
+static bool set_generating_function(dyn_arg_list args) {
+	auto func = "pfx_set_generating_function";
+	bool okay;
+	std::string tag, genfn;
+	std::tie(tag, genfn) = DynRpg::ParseArgs<std::string, std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
-		itr->second->setGeneratingFunction(func);
+		itr->second->setGeneratingFunction(genfn);
 	}
 	return true;
 }
 
-static bool use_screen_relative(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_use_screen_relative")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_STR_ARG(1, bol)
+static bool use_screen_relative(dyn_arg_list args) {
+	auto func = "pfx_use_screen_relative";
+	bool okay;
+	std::string tag, bol;
+	std::tie(tag, bol) = DynRpg::ParseArgs<std::string, std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1462,12 +1483,14 @@ static bool use_screen_relative(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool unload_texture(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_unload_texture")
+static bool unload_texture(dyn_arg_list args) {
+	auto func = "pfx_unload_texture";
+	bool okay;
 
-	DYNRPG_CHECK_ARG_LENGTH(1)
-
-	DYNRPG_GET_STR_ARG(0, tag)
+	auto tag = DynRpg::ParseSingleArg<std::string>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr != pfx_list.end()) {
@@ -1476,7 +1499,7 @@ static bool unload_texture(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool load_effect(const dyn_arg_list& args) {
+static bool load_effect(dyn_arg_list args) {
 	//FILE* fp;
 	//char attribute[80];
 	//fp = fopen(arg[0].text, "r");
@@ -1484,13 +1507,15 @@ static bool load_effect(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool SetZ(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_z")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, z)
+static bool SetZ(dyn_arg_list args) {
+	auto func = "pfx_set_z";
+	bool okay;
+	std::string tag;
+	int z;
+	std::tie(tag, z) = DynRpg::ParseArgs<std::string, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr == pfx_list.end()) {
@@ -1505,13 +1530,15 @@ static bool SetZ(const dyn_arg_list& args) {
 	return true;
 }
 
-static bool SetLayer(const dyn_arg_list& args) {
-	DYNRPG_FUNCTION("pfx_set_layer")
-
-	DYNRPG_CHECK_ARG_LENGTH(2)
-
-	DYNRPG_GET_STR_ARG(0, tag)
-	DYNRPG_GET_INT_ARG(1, layer)
+static bool SetLayer(dyn_arg_list args) {
+	auto func = "pfx_set_layer";
+	bool okay;
+	std::string tag;
+	int layer;
+	std::tie(tag, layer) = DynRpg::ParseArgs<std::string, int>(func, args, &okay);
+	if (!okay) {
+		return true;
+	}
 
 	ptag_t::iterator itr = pfx_list.find(tag);
 	if (itr == pfx_list.end()) {
@@ -1552,6 +1579,8 @@ static bool SetLayer(const dyn_arg_list& args) {
 		case 10:
 			z = Priority_Timer;
 			break;
+		default:
+			z = 0;
 	}
 
 	int old_z = itr->second->GetZ() & 0x00FFFFFF;

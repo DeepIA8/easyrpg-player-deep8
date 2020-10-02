@@ -130,6 +130,11 @@ namespace DynRpg {
 		return t;
 	}
 
+	template <typename T>
+	T ParseSingleArg(StringView func_name, dyn_arg_list args, bool* parse_okay = nullptr, bool warn = true) {
+		return std::get<0>(ParseArgs<T>(func_name, args, parse_okay, warn));
+	}
+
 	void OnMapChange();
 }
 
@@ -144,16 +149,10 @@ public:
 	virtual void Update() {}
 	virtual void Load(const std::vector<uint8_t>&) {}
 	virtual std::vector<uint8_t> Save() { return {}; }
-
-<<<<<<< HEAD
-private:
-	std::string identifier;
-=======
 	virtual void OnMapChange() {};
 
-protected:
-	DynRpgPlugin() {}
->>>>>>> f207aada... DynRPG Deep8: Clear sprites and particles on map change
+private:
+	std::string identifier;
 };
 
 #endif
