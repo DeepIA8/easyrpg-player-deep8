@@ -1133,7 +1133,7 @@ static bool SetSpriteColor(dyn_arg_list args) {
 	int sat = 100;
 
 	if (args.size() > 4) {
-		sat = DynRpg::ParseSingleArg<int>(func, args.subspan(3), &okay);
+		sat = DynRpg::ParseSingleArg<int>(func, args.subspan(4), &okay);
 		if (!okay) {
 			return true;
 		}
