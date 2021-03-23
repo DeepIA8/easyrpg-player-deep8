@@ -537,7 +537,6 @@ void Stream::draw_block_basic(Bitmap& dst, int ref, uint8_t n, uint8_t z, uint8_
 			idx++;
 		}
 		z = (z + 1) % fade;
-		SetZ(z);
 	}
 
 }
@@ -571,7 +570,6 @@ void Stream::draw_block_texture(Bitmap& dst, int ref, uint8_t n, uint8_t z, uint
 			idx++;
 		}
 		z = (z + 1) % fade;
-		SetZ(z);
 	}
 }
 
