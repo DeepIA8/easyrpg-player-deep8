@@ -294,7 +294,7 @@ public:
 	}
 
 	void Update() {
-		if (!sprite) {
+		if (file.empty()) {
 			return;
 		}
 
@@ -329,14 +329,32 @@ public:
 			current_angle += (rotate_cw ? 1 : -1) * rotate_forever_degree;
 		}
 
+		double zx = zoom_x.NextFrame() / 100.0;
+		double zy = zoom_y.NextFrame() / 100.0;
+
+		bool loaded_this_frame = !(zx == 0.0 && zy == 0.0 || current_opacity == 0 || visible == false);
+
+		if (loaded_this_frame != image_loaded) {
+			if (!image_loaded) {
+				// Load image now
+				LoadSprite();
+			} else {
+				UnloadSprite();
+			}
+		}
+
+		if (!sprite) {
+			return;
+		}
+
 		sprite->SetX(x);
 		sprite->SetY(y);
 		sprite->SetZ(z);
 		sprite->SetOx((int)(sprite->GetWidth() / 2));
 		sprite->SetOy((int)(sprite->GetHeight() / 2));
 		sprite->SetAngle(current_angle * (2 * M_PI) / 360);
-		sprite->SetZoomX(zoom_x.NextFrame() / 100.0);
-		sprite->SetZoomY(zoom_y.NextFrame() / 100.0);
+		sprite->SetZoomX(zx);
+		sprite->SetZoomY(zy);
 		sprite->SetOpacity((int)(current_opacity));
 		sprite->SetTone(Tone(current_red, current_green, current_blue, current_sat));
 		sprite->SetVisible(visible);
@@ -552,6 +570,7 @@ private:
 	bool SetSpriteImage(const std::string& filename) {
 		// Does not go through the Cache code
 		// No fancy stuff like checkerboard on load error :(
+		image_loaded = false;
 
 		file = FileFinder::FindDefault(filename);
 
@@ -559,10 +578,24 @@ private:
 			Output::Warning("Sprite not found: %s", filename.c_str());
 			return false;
 		}
+
+		return LoadSprite();
+	}
+
+	bool LoadSprite() {
+		if (file.empty()) {
+			return false;
+		}
+
 		sprite.reset(new Sprite());
 		sprite->SetBitmap(Bitmap::Create(file));
-
+		image_loaded = true;
 		return true;
+	}
+
+	void UnloadSprite() {
+		sprite.reset();
+		image_loaded = false;
 	}
 
 	std::unique_ptr<Sprite> sprite;
@@ -601,6 +634,8 @@ private:
 	int tone_time_left = 0;
 
 	std::string file;
+
+	bool image_loaded = false;
 };
 
 static bool AddSprite(dyn_arg_list args) {
@@ -624,7 +659,6 @@ static bool AddSprite(dyn_arg_list args) {
 	RpgssSprite* graphic = graphics[id].get();
 
 	switch (args.size()) {
-		default:
 		case 9:
 		{
 			auto angle = DynRpg::ParseSingleArg<float>(func, args.subspan(8), &okay);
@@ -676,6 +710,7 @@ static bool AddSprite(dyn_arg_list args) {
 		}
 		case 3:
 			// Blend Mode
+		default:
 			break;
 	}
 
